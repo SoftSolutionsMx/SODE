@@ -2,6 +2,17 @@
 
 SODE is a Django project in its initial setup stage. It currently includes Django's built-in administration, authentication, and session support, with SQLite for local storage. No custom applications or project-specific pages have been added yet.
 
+## Branch strategy
+
+Name branches using `{type}/#n`, where `n` is the issue number:
+
+- Feature: `feat/#n`
+- Task: `task/#n`
+- Bug fix: `fix/#n`
+
+For example, use `feat/#123` for a feature associated with issue 123. When work is complete, open a pull request targeting `master`.
+
+
 ## Requirements
 
 - Python 3.12 or newer, with `pip` and `venv` available.
@@ -101,12 +112,3 @@ Project settings live in [`sode/settings.py`](sode/settings.py). The current def
 
 The settings are intended for local development: `DEBUG` is enabled, `ALLOWED_HOSTS` is empty, and `SECRET_KEY` is hardcoded. Before deploying, configure a private secret key, disable debug mode, set allowed hosts, and review the database, static file, and email settings. Use a production application server instead of `runserver`.
 
-## Branch strategy
-
-Name branches using `{type}/#n`, where `n` is the issue number:
-
-- Feature: `feat/#n`
-- Task: `task/#n`
-- Bug fix: `fix/#n`
-
-For example, use `feat/#123` for a feature associated with issue 123. When work is complete, open a pull request targeting `master`.
