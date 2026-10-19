@@ -18,7 +18,7 @@ For example, use `feat/#123` for a feature associated with issue 123. When work 
 - Python 3.12 or newer, with `pip` and `venv` available.
 - Django 6.1.2, matching the version used to generate the project.
 
-The existing development environment uses Python 3.14.8. The repository does not yet include a dependency manifest or lockfile.
+The existing development environment uses Python 3.14.8. Dependencies are listed in `requirements.txt`.
 
 ## Getting started
 
@@ -41,7 +41,7 @@ py -m venv venv
 ### 2. Install Django
 
 ```bash
-python -m pip install "Django==6.1.2"
+python -m pip install -r requirements.txt
 ```
 
 ### 3. Initialize the database
@@ -67,6 +67,38 @@ python manage.py runserver
 ```
 
 Open <http://127.0.0.1:8000/> to see Django's default welcome page. Sign in at <http://127.0.0.1:8000/admin/> with the administrator account you created.
+
+## Run with Docker
+
+The Docker image is for local development and uses Python 3.14.8. On Windows, install [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) and use Linux containers with the WSL 2 backend. Run these commands in PowerShell from the repository root.
+
+Build the image:
+
+```powershell
+docker build -t sode .
+```
+
+Initialize the database:
+
+```powershell
+docker run --rm --mount "type=bind,source=${PWD},target=/app" sode python manage.py migrate
+```
+
+Create an administrator account:
+
+```powershell
+docker run --rm -it --mount "type=bind,source=${PWD},target=/app" sode python manage.py createsuperuser
+```
+
+Start the development server:
+
+```powershell
+docker run --rm -it --mount "type=bind,source=${PWD},target=/app" -p 127.0.0.1:8000:8000 sode
+```
+
+Open <http://127.0.0.1:8000/> or <http://127.0.0.1:8000/admin/>. Press Ctrl+C to stop the server.
+
+The bind mount enables automatic reload when source files change and keeps `db.sqlite3` on the Windows host after the container exits. Docker Desktop handles access to the host files; no Linux user ID is needed. Quoting the mount argument supports project paths containing spaces. Migrations run explicitly, never during the image build. Rebuild the image after changing `requirements.txt`.
 
 ## Development commands
 
