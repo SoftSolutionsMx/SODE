@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<body>
+<h1>SODE</h1>
+{% if messages %}
+{% for message in messages %}
+<p>{{ message }}</p>
+{% endfor %}
+{% endif %}
+{% if user.is_authenticated %}
+<p>Usuario: {{ user.email }}</p>
+<form method="post" action="{% url 'account_logout' %}">
+{% csrf_token %}
+<button type="submit">Cerrar sesión</button>
+</form>
+{% else %}
+<p><a href="{% url 'assistant_signup' %}">Crear cuenta de asistente</a></p>
+<p><a href="{% url 'organizer_signup' %}">Crear cuenta de organizador</a></p>
+<p><a href="{% url 'account_login' %}">Iniciar sesión</a></p>
+{% endif %}
+</body>
+</html>
