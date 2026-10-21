@@ -41,7 +41,10 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'users_app',
+    'django_tailwind_cli',
 ]
+
+STATICFILES_DIRS = [BASE_DIR / "assets"]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
