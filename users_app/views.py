@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.db import transaction
-from django.http import HttpResponseNotFound
 from django.shortcuts import redirect, render
 from allauth.account.views import LoginView
 from allauth.account.models import EmailAddress
@@ -21,7 +20,7 @@ def home(request):
 
 
 class SiteLoginView(LoginView):
-    template_name = 'account/login.html'
+    template_name = 'users_app/login.html'
 
     def form_valid(self, form):
         messages.success(self.request, f'Sesión iniciada correctamente como {form.user.email}.')
@@ -32,7 +31,7 @@ login = SiteLoginView.as_view()
 
 
 def signup_disabled(request):
-    return HttpResponseNotFound('El registro general no está disponible.')
+    return redirect('assistant_signup')
 
 
 def assistant_signup(request):

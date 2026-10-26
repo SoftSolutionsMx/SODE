@@ -64,6 +64,14 @@ class LoginTests(TestCase):
         self.assertContains(response, 'login@example.com')
         self.assertRedirects(response, '/')
 
+    def test_login_uses_custom_spanish_template(self):
+        response = self.client.get('/accounts/login/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Bienvenido de nuevo')
+        self.assertContains(response, 'Iniciar sesión')
+        self.assertContains(response, 'Regístrate como asistente')
+
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post('/accounts/login/', {
             'login': 'login@example.com',
@@ -72,12 +80,16 @@ class LoginTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.wsgi_request.user.is_authenticated)
-        self.assertContains(response, 'The email address and/or password you specified are not correct.')
+        self.assertContains(
+            response,
+            'La dirección de correo electrónico y/o la contraseña que ha indicado no son correctas.',
+        )
 
-    def test_generic_signup_is_not_available(self):
+    def test_generic_signup_uses_custom_signup_form(self):
         response = self.client.get('/accounts/signup/')
 
-        self.assertEqual(response.status_code, 404)
+        self.assertRedirects(response, reverse('assistant_signup'))
+        self.assertContains(self.client.get(reverse('assistant_signup')), 'Crear cuenta de asistente')
 
     def test_signup_rejects_weak_password(self):
         response = self.client.post(reverse('assistant_signup'), {
