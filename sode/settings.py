@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,6 +46,8 @@ INSTALLED_APPS = [
 ]
 
 STATICFILES_DIRS = [BASE_DIR / "assets"]
+TAILWIND_CLI_SRC_CSS = BASE_DIR / "tailwind" / "input.css"
+TAILWIND_CLI_DIST_CSS = "css/tailwind.css"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -63,9 +66,14 @@ AUTH_USER_MODEL = 'users_app.User'
 SITE_ID = 1
 
 ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+SODE_EMAIL_VERIFICATION = os.getenv('SODE_EMAIL_VERIFICATION', '').lower() in {
+    '1', 'true', 'yes', 'on'
+}
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory' if SODE_EMAIL_VERIFICATION else 'none'
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1', 'password2']
 LOGIN_REDIRECT_URL = '/'
+SESSION_COOKIE_AGE = 30 * 24 * 60 * 60
+SESSION_SAVE_EVERY_REQUEST = True
 
 TEMPLATES = [
     {
@@ -112,6 +120,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'users_app.validators.PasswordRequirementsValidator',
+    },
 ]
 
 
@@ -136,8 +147,4 @@ STATIC_URL = 'static/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

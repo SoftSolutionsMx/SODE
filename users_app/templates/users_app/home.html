@@ -1,22 +1,21 @@
-<!doctype html>
-<html>
-<body>
-<h1>SODE</h1>
-{% if messages %}
-{% for message in messages %}
-<p>{{ message }}</p>
-{% endfor %}
-{% endif %}
-{% if user.is_authenticated %}
-<p>Usuario: {{ user.email }}</p>
-<form method="post" action="{% url 'account_logout' %}">
-{% csrf_token %}
-<button type="submit">Cerrar sesión</button>
-</form>
-{% else %}
-<p><a href="{% url 'assistant_signup' %}">Crear cuenta de asistente</a></p>
-<p><a href="{% url 'organizer_signup' %}">Crear cuenta de organizador</a></p>
-<p><a href="{% url 'account_login' %}">Iniciar sesión</a></p>
-{% endif %}
-</body>
-</html>
+{% extends "users_app/base.html" %}
+{% block title %}SODE | Eventos que conectan{% endblock %}
+{% block content %}
+<section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 sm:px-12 lg:px-24">
+  <p class="mb-4 text-sm font-semibold uppercase tracking-widest text-indigo-300">Descubre. Participa. Conecta.</p>
+  <h1 class="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">Tu comunidad, tus eventos.</h1>
+  <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-400">SODE reúne experiencias académicas, culturales y recreativas en un solo lugar.</p>
+  <div class="mt-8 flex flex-wrap gap-3">
+    {% if user.is_authenticated %}
+      <a class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" href="{% url 'profile' %}">Ver mi perfil</a>
+    {% else %}
+      <a class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" href="{% url 'assistant_signup' %}">Crear cuenta</a>
+      <a class="rounded-lg bg-slate-700 px-5 py-3 font-semibold text-white hover:bg-slate-600" href="{% url 'account_login' %}">Iniciar sesión</a>
+    {% endif %}
+  </div>
+</section>
+<section class="mt-6 grid gap-4 sm:grid-cols-2">
+  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6"><h2 class="text-xl font-bold text-indigo-300">Para asistentes</h2><p class="mt-2 text-slate-400">Encuentra actividades que coinciden con tus intereses.</p></article>
+  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6"><h2 class="text-xl font-bold text-indigo-300">Para organizadores</h2><p class="mt-2 text-slate-400">Presenta tu organización y conecta con tu comunidad.</p></article>
+</section>
+{% endblock %}
