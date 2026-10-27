@@ -8,7 +8,9 @@ class User(AbstractUser):
         ORGANIZER = 'organizer', 'Organizador'
         ADMINISTRATOR = 'administrator', 'Administrador'
 
+    username = models.CharField(max_length=200, unique=True)
     email = models.EmailField(unique=True)
+    location = models.CharField(max_length=200, blank=True)
     role = models.CharField(max_length=20, choices=Roles.choices)
     interests = models.ManyToManyField('Interest', blank=True, related_name='users')
 
@@ -18,8 +20,9 @@ class User(AbstractUser):
 
 class Organization(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='organization')
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    event_type = models.CharField(max_length=200, blank=True)
     logo = models.ImageField(upload_to='organization_logos/', blank=True)
 
     def __str__(self):

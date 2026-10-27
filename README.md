@@ -144,3 +144,28 @@ Project settings live in [`sode/settings.py`](sode/settings.py). The current def
 
 The settings are intended for local development: `DEBUG` is enabled, `ALLOWED_HOSTS` is empty, and `SECRET_KEY` is hardcoded. Before deploying, configure a private secret key, disable debug mode, set allowed hosts, and review the database, static file, and email settings. Use a production application server instead of `runserver`.
 
+## User account email verification
+
+Email verification is disabled by default for local development. Set
+`SODE_EMAIL_VERIFICATION=true` to enable django-allauth's mandatory email
+confirmation flow. The configured development backend writes confirmation
+messages to the console; configure a real SMTP backend only in an environment
+where email delivery is available.
+
+Browser authentication uses django-allauth sessions, limited to 30 days.
+
+Tailwind is compiled by `django-tailwind-cli` from `tailwind/input.css`:
+
+```powershell
+python manage.py tailwind build
+```
+
+Assistant profiles include username, name, email, location, and optional
+interests. Organizer profiles additionally include organization description and
+event typology.
+
+Unverified accounts older than 30 days can be removed with:
+
+```powershell
+python manage.py delete_unverified_users
+```
