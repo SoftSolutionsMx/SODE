@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'users_app',
     'django_tailwind_cli',
+    'events_app',
+    'social_app',
 ]
 
 STATICFILES_DIRS = [BASE_DIR / "assets"]

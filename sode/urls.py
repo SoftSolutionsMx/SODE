@@ -20,6 +20,7 @@ from users_app.views import home, login, signup_disabled
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('social/', include('social_app.urls')),
     path('accounts/login/', login, name='account_login'),
     path('accounts/signup/', signup_disabled, name='account_signup'),
     path('accounts/', include('allauth.urls')),

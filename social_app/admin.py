@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import Seguimiento, EventoFavorito
 
-# Register your models here.
+admin.site.register(Seguimiento)
+admin.site.register(EventoFavorito)
