@@ -24,5 +24,6 @@ urlpatterns = [
     path('accounts/signup/', signup_disabled, name='account_signup'),
     path('accounts/', include('allauth.urls')),
     path('users/', include('users_app.urls')),
+    path('discovery/', include('discovery_app.urls')),
     path('', home, name='home'),
 ]
