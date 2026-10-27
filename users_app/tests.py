@@ -41,6 +41,44 @@ class SignupTests(TestCase):
         self.assertEqual(Organization.objects.get(user=user).name, 'Organización SODE')
 
 
+class UserManagerTests(TestCase):
+    def test_create_user_uses_email_as_username_when_omitted(self):
+        user = User.objects.create_user(
+            email='manager@example.com',
+            password='A-secure-password-123',
+            role=User.Roles.ASSISTANT,
+        )
+
+        self.assertEqual(user.username, 'manager@example.com')
+        self.assertTrue(user.check_password('A-secure-password-123'))
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    def test_create_superuser_sets_required_admin_flags(self):
+        user = User.objects.create_superuser(
+            email='admin@example.com',
+            password='A-secure-password-123',
+            role=User.Roles.ADMINISTRATOR,
+        )
+
+        self.assertEqual(user.username, 'admin@example.com')
+        self.assertTrue(user.is_active)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+
+    def test_create_superuser_rejects_disabled_staff_flag(self):
+        with self.assertRaisesMessage(
+            ValueError,
+            'El superusuario debe tener is_staff=True.',
+        ):
+            User.objects.create_superuser(
+                email='admin@example.com',
+                password='A-secure-password-123',
+                role=User.Roles.ADMINISTRATOR,
+                is_staff=False,
+            )
+
+
 class LoginTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
