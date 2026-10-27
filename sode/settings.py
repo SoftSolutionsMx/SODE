@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'users_app',
+    'discovery_app',
     'django_tailwind_cli',
 ]
 
