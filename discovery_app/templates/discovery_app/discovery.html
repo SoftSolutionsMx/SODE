@@ -1,0 +1,259 @@
+{% extends "users_app/base.html" %}
+
+{% block title %}SODE | Explorar Eventos{% endblock %}
+
+{% block content %}
+<section class="mt-6">
+  <!-- Encabezado de Descubrimiento -->
+  <div class="rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 p-6 sm:p-10">
+    <div class="max-w-3xl">
+      <div class="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-300">
+        <span>✨ Motor Inteligente de Recomendación</span>
+      </div>
+      <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
+        Descubre eventos diseñados para ti
+      </h1>
+      <p class="mt-3 text-base leading-7 text-slate-300 sm:text-lg">
+        Explora actividades basadas en tus intereses, ubicación y comunidades a las que sigues.
+      </p>
+    </div>
+
+    <!-- Barra de Búsqueda y Filtros Rápidos -->
+    <form method="get" action="{% url 'discovery' %}" class="mt-8 grid gap-3 sm:grid-cols-12">
+      <div class="sm:col-span-6">
+        <label for="search-input" class="sr-only">Buscar eventos</label>
+        <div class="relative">
+          <input
+            id="search-input"
+            type="text"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Buscar por título, temática o palabras clave..."
+            class="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+          >
+        </div>
+      </div>
+
+      <div class="sm:col-span-4">
+        <label for="location-input" class="sr-only">Ubicación</label>
+        <input
+          id="location-input"
+          type="text"
+          name="location"
+          value="{{ target_location }}"
+          placeholder="Ciudad o 'lat, lng' (ej. Mérida)..."
+          class="w-full rounded-xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+        >
+      </div>
+
+      <div class="flex gap-2 sm:col-span-2">
+        <button
+          type="submit"
+          class="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          Explorar
+        </button>
+        {% if search_query or selected_interest or target_location %}
+          <a
+            href="{% url 'discovery' %}"
+            class="flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-3 py-3 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+            title="Limpiar filtros"
+          >
+            ✕
+          </a>
+        {% endif %}
+      </div>
+    </form>
+
+    <!-- Filtros de Categorías / Intereses (Pills) -->
+    {% if available_interests %}
+      <div class="mt-6 flex flex-wrap items-center gap-2 pt-4 border-t border-slate-800/80">
+        <span class="text-xs font-medium uppercase tracking-wider text-slate-400">Intereses:</span>
+        <a
+          href="{% url 'discovery' %}{% if search_query %}?q={{ search_query }}{% endif %}{% if target_location %}&location={{ target_location }}{% endif %}"
+          class="rounded-full px-3 py-1 text-xs font-semibold transition {% if not selected_interest %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}"
+        >
+          Todos
+        </a>
+        {% for interest in available_interests %}
+          <a
+            href="{% url 'discovery' %}?interest={{ interest.name }}{% if search_query %}&q={{ search_query }}{% endif %}{% if target_location %}&location={{ target_location }}{% endif %}"
+            class="rounded-full px-3 py-1 text-xs font-semibold transition {% if selected_interest == interest.name %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}"
+          >
+            {{ interest.name }}
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Barra de Estado y Resultados -->
+  <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h2 class="text-xl font-bold text-white">Eventos disponibles</h2>
+      <p class="text-xs text-slate-400">
+        {% if events_count == 1 %}
+          1 evento encontrado
+        {% else %}
+          {{ events_count }} eventos encontrados
+        {% endif %}
+        {% if user.is_authenticated %}
+          • Priorizados según tu afinidad personal
+        {% else %}
+          • Inicia sesión para recibir recomendaciones personalizadas
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Enlace a API JSON (CP-INT-06) -->
+    <a
+      href="{% url 'discovery_api_recommendations' %}{% if search_query %}?q={{ search_query }}{% endif %}{% if selected_interest %}&interest={{ selected_interest }}{% endif %}{% if target_location %}&location={{ target_location }}{% endif %}"
+      target="_blank"
+      class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-600 hover:text-white"
+    >
+      <span>Formato JSON</span>
+      <span class="text-indigo-400">↗</span>
+    </a>
+  </div>
+
+  <!-- Grid de Eventos -->
+  {% if evaluations %}
+    <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for item in evaluations %}
+        {% with ev=item.event %}
+          <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-lg transition hover:border-slate-700 hover:shadow-indigo-500/5">
+            <!-- Imagen promocional / Placeholder -->
+            <div class="relative h-48 w-full bg-slate-950 overflow-hidden">
+              {% if ev.promotional_image %}
+                <img
+                  src="{{ ev.promotional_image.url }}"
+                  alt="{{ ev.title|default:ev.titulo }}"
+                  class="h-full w-full object-cover transition duration-300 hover:scale-105"
+                >
+              {% elif ev.imagen_promocional %}
+                <img
+                  src="{{ ev.imagen_promocional.url }}"
+                  alt="{{ ev.title|default:ev.titulo }}"
+                  class="h-full w-full object-cover transition duration-300 hover:scale-105"
+                >
+              {% else %}
+                <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950/60 p-4 text-center">
+                  <span class="text-3xl font-black tracking-wider text-indigo-400/40">SODE</span>
+                </div>
+              {% endif %}
+
+              <!-- Badge de Afinidades / Recomendación -->
+              {% if item.is_recommended and user.is_authenticated %}
+                <div class="absolute top-3 right-3 rounded-full bg-indigo-600/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
+                  ★ {{ item.score_percentage }}% afinidad
+                </div>
+              {% elif item.score_percentage > 0 and user.is_authenticated %}
+                <div class="absolute top-3 right-3 rounded-full bg-slate-800/90 backdrop-blur-md px-2.5 py-0.5 text-xs font-medium text-slate-300">
+                  {{ item.score_percentage }}% afinidad
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Contenido del Evento -->
+            <div class="flex flex-1 flex-col p-5">
+              <!-- Organización promotora -->
+              {% if ev.organization or ev.organizacion %}
+                <p class="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                  {{ ev.organization.name|default:ev.organizacion.name|default:ev.organization|default:ev.organizacion }}
+                </p>
+              {% endif %}
+
+              <h3 class="mt-1 text-lg font-bold text-white leading-snug">
+                {{ ev.title|default:ev.titulo }}
+              </h3>
+
+              <p class="mt-2 line-clamp-2 text-sm text-slate-400">
+                {{ ev.description|default:ev.descripcion }}
+              </p>
+
+              <!-- Metadatos: Fecha, Ubicación, Capacidad -->
+              <div class="mt-4 space-y-1.5 text-xs text-slate-300 border-t border-slate-800/60 pt-3">
+                {% if ev.start_date or ev.fecha_inicio %}
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-500">📅</span>
+                    <span>{{ ev.start_date|default:ev.fecha_inicio|date:"d M Y, H:i" }}</span>
+                  </div>
+                {% endif %}
+
+                {% if ev.location or ev.ubicacion %}
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-500">📍</span>
+                    <span class="truncate">{{ ev.location|default:ev.ubicacion }}</span>
+                  </div>
+                {% endif %}
+
+                {% if ev.max_capacity or ev.capacidad_maxima %}
+                  <div class="flex items-center gap-2">
+                    <span class="text-slate-500">👥</span>
+                    <span>Cupo: {{ ev.max_capacity|default:ev.capacidad_maxima }} asistentes</span>
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- Razones de recomendación -->
+              {% if item.reasons and user.is_authenticated %}
+                <div class="mt-3 rounded-lg bg-indigo-950/40 border border-indigo-500/20 p-2 text-[11px] text-indigo-300">
+                  {% for reason in item.reasons %}
+                    <p class="leading-tight">• {{ reason }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <!-- Intereses / Etiquetas -->
+              {% if ev.interests.all or ev.intereses.all %}
+                <div class="mt-3 flex flex-wrap gap-1">
+                  {% for interest in ev.interests.all|default:ev.intereses.all %}
+                    <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+                      #{{ interest.name }}
+                    </span>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Footer con acción -->
+            <div class="p-5 pt-0">
+              <a
+                href="#"
+                class="block w-full rounded-xl bg-slate-800 px-4 py-2.5 text-center text-xs font-semibold text-white transition hover:bg-indigo-600 focus:outline-none"
+              >
+                Ver detalles del evento
+              </a>
+            </div>
+          </article>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Estado Vacío -->
+    <div class="mt-10 rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
+      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-2xl text-slate-400">
+        🔍
+      </div>
+      <h3 class="mt-4 text-base font-semibold text-white">No se encontraron eventos</h3>
+      <p class="mt-2 text-sm text-slate-400 max-w-md mx-auto">
+        {% if search_query or selected_interest or target_location %}
+          No hay actividades publicadas que coincidan con los filtros aplicados. Intenta ampliar tus criterios de búsqueda.
+        {% else %}
+          Actualmente no hay eventos publicados en el catálogo general. Vuelve a consultar pronto.
+        {% endif %}
+      </p>
+      {% if search_query or selected_interest or target_location %}
+        <div class="mt-6">
+          <a
+            href="{% url 'discovery' %}"
+            class="inline-flex rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
+          >
+            Ver todos los eventos
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
