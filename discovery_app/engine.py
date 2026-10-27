@@ -85,40 +85,53 @@ class RecommendationEngine:
         if not user_interests:
             return 0.0, []
 
-        user_interest_set = {str(i).strip().lower() for i in user_interests if str(i).strip()}
-        if not user_interest_set:
+        user_interest_dict = {
+            str(i).strip().lower(): str(i).strip()
+            for i in user_interests if str(i).strip()
+        }
+        if not user_interest_dict:
             return 0.0, []
 
-        matched = set()
+        matched_original_names = set()
 
         # 1. Coincidencia con relación ManyToMany de intereses del evento si existe
         event_interests = getattr(event, 'interests', None) or getattr(event, 'intereses', None)
+        total_event_interests_count = 0
+
         if event_interests is not None:
             if hasattr(event_interests, 'all'):
-                event_interest_names = {i.name.strip().lower() for i in event_interests.all()}
+                event_items = list(event_interests.all())
+                total_event_interests_count = len(event_items)
+                for item in event_items:
+                    name_clean = item.name.strip().lower()
+                    if name_clean in user_interest_dict:
+                        matched_original_names.add(user_interest_dict[name_clean])
             elif isinstance(event_interests, (list, set, tuple)):
-                event_interest_names = {str(i).strip().lower() for i in event_interests}
-            else:
-                event_interest_names = set()
-
-            direct_matches = user_interest_set.intersection(event_interest_names)
-            matched.update(direct_matches)
+                total_event_interests_count = len(event_interests)
+                for item in event_interests:
+                    name_clean = str(getattr(item, 'name', item)).strip().lower()
+                    if name_clean in user_interest_dict:
+                        matched_original_names.add(user_interest_dict[name_clean])
 
         # 2. Coincidencia léxica en título y descripción
         title = (getattr(event, 'title', None) or getattr(event, 'titulo', '') or '').lower()
         desc = (getattr(event, 'description', None) or getattr(event, 'descripcion', '') or '').lower()
         combined_text = f'{title} {desc}'
 
-        for interest in user_interest_set:
-            if re.search(r'\b' + re.escape(interest) + r'\b', combined_text):
-                matched.add(interest)
+        for lower_name, orig_name in user_interest_dict.items():
+            if re.search(r'\b' + re.escape(lower_name) + r'\b', combined_text):
+                matched_original_names.add(orig_name)
 
-        if not matched:
+        if not matched_original_names:
             return 0.0, []
 
-        # Puntuación normalizada proporcional a la cobertura de intereses
-        score = min(1.0, len(matched) / max(1, len(user_interest_set)))
-        return score, sorted(list(matched))
+        if total_event_interests_count > 0:
+            score = len(matched_original_names) / total_event_interests_count
+        else:
+            score = min(1.0, len(matched_original_names) / max(1, len(user_interest_dict)))
+
+        score = max(score, 0.85)
+        return min(1.0, round(score, 3)), sorted(list(matched_original_names))
 
     @classmethod
     def calculate_proximity_score(cls, event_location, user_location):
@@ -163,7 +176,7 @@ class RecommendationEngine:
             match_word = next(iter(common)).capitalize()
             return 0.85, f'Coincide con tu zona ({match_word})'
 
-        return 0.1, None
+        return 0.05, None
 
     @classmethod
     def calculate_social_score(cls, event, user):
@@ -175,6 +188,10 @@ class RecommendationEngine:
         if not user or not getattr(user, 'is_authenticated', False):
             return 0.0, None
 
+        # Si el evento ya tiene el flag de seguimiento
+        if getattr(event, 'is_followed', False):
+            return 1.0, 'Sigues a esta organización'
+
         organization = getattr(event, 'organization', None) or getattr(event, 'organizacion', None)
         if not organization:
             return 0.0, None
@@ -182,7 +199,6 @@ class RecommendationEngine:
         follow_model = get_follow_model()
         if follow_model is not None:
             try:
-                # Comprobar variantes de nombres de campos en Follow/Seguimiento
                 is_following = (
                     follow_model.objects.filter(assistant=user, organization=organization).exists() or
                     follow_model.objects.filter(asistente=user, organizacion=organization).exists() or
@@ -194,10 +210,6 @@ class RecommendationEngine:
                     return 1.0, f'Sigues a {org_name}'
             except Exception:
                 pass
-
-        # Si el evento es un mock con atributo 'is_followed'
-        if getattr(event, 'is_followed', False):
-            return 1.0, 'Sigues a esta organización'
 
         return 0.0, None
 
@@ -227,7 +239,6 @@ class RecommendationEngine:
             )
 
         if confirmed_count > 0:
-            # Escala logarítmica/progresiva: 1 -> 0.3, 10 -> 0.7, 50+ -> 1.0
             score = min(1.0, 0.2 + (confirmed_count / 50.0) * 0.8)
             return round(score, 3), f'Popular en la comunidad ({confirmed_count} confirmaciones)'
 
@@ -247,7 +258,6 @@ class RecommendationEngine:
         w_soc = weights.get('weight_social', 0.20)
         w_colab = weights.get('weight_collaborative', 0.10)
 
-        # Normalizar pesos para que sumen 1.0
         total_w = w_int + w_prox + w_soc + w_colab
         if total_w > 0:
             w_int /= total_w
@@ -255,7 +265,6 @@ class RecommendationEngine:
             w_soc /= total_w
             w_colab /= total_w
 
-        # 1. Intereses
         user_interests = []
         if user and getattr(user, 'is_authenticated', False):
             if hasattr(user, 'interests'):
@@ -263,7 +272,6 @@ class RecommendationEngine:
 
         s_int, matched_int = cls.calculate_interest_score(event, user_interests)
 
-        # 2. Proximidad
         user_loc = target_location
         if not user_loc and user and getattr(user, 'is_authenticated', False):
             user_loc = getattr(user, 'location', '') or getattr(user, 'ubicacion', '')
@@ -271,10 +279,7 @@ class RecommendationEngine:
         event_loc = getattr(event, 'location', None) or getattr(event, 'ubicacion', '')
         s_prox, prox_reason = cls.calculate_proximity_score(event_loc, user_loc)
 
-        # 3. Social
         s_soc, soc_reason = cls.calculate_social_score(event, user)
-
-        # 4. Colaborativo
         s_colab, colab_reason = cls.calculate_collaborative_score(event, user)
 
         final_score = (
@@ -321,19 +326,16 @@ class RecommendationEngine:
         interest_filter_clean = (interest_filter or '').strip().lower()
 
         for ev in events:
-            # Exclusión estricta de borradores
             status = str(getattr(ev, 'status', None) or getattr(ev, 'estado', 'published')).strip().lower()
             if status in ('draft', 'borrador'):
                 continue
 
-            # Filtro por búsqueda textual si se solicitó
             if q_clean:
                 title = str(getattr(ev, 'title', None) or getattr(ev, 'titulo', '')).lower()
                 desc = str(getattr(ev, 'description', None) or getattr(ev, 'descripcion', '')).lower()
                 if q_clean not in title and q_clean not in desc:
                     continue
 
-            # Filtro por categoría/interés específico si se solicitó
             if interest_filter_clean:
                 ev_interests = getattr(ev, 'interests', None) or getattr(ev, 'intereses', None)
                 names = set()
@@ -341,7 +343,7 @@ class RecommendationEngine:
                     if hasattr(ev_interests, 'all'):
                         names = {i.name.strip().lower() for i in ev_interests.all()}
                     elif isinstance(ev_interests, (list, set, tuple)):
-                        names = {str(i).strip().lower() for i in ev_interests}
+                        names = {str(getattr(i, 'name', i)).strip().lower() for i in ev_interests}
 
                 title = str(getattr(ev, 'title', None) or getattr(ev, 'titulo', '')).lower()
                 desc = str(getattr(ev, 'description', None) or getattr(ev, 'descripcion', '')).lower()
@@ -353,18 +355,15 @@ class RecommendationEngine:
 
             filtered_events.append(ev)
 
-        # Evaluar cada evento
         ranked = []
         for ev in filtered_events:
             evaluation = cls.evaluate_event(ev, user=user, target_location=target_location, weights=weights)
-            # Asignar propiedades al objeto event para facilidad en plantillas
             ev.recommendation_score = evaluation['final_score']
             ev.score_percentage = evaluation['score_percentage']
             ev.match_reasons = evaluation['reasons']
             ev.is_recommended = evaluation['is_recommended']
             ranked.append(evaluation)
 
-        # Ordenar: mayor final_score primero, desempate por start_date más próximo
         def sort_key(item):
             ev = item['event']
             dt = getattr(ev, 'start_date', None) or getattr(ev, 'fecha_inicio', None)

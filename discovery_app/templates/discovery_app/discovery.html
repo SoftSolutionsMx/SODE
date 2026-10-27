@@ -120,113 +120,105 @@
   {% if evaluations %}
     <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {% for item in evaluations %}
-        {% with ev=item.event %}
-          <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-lg transition hover:border-slate-700 hover:shadow-indigo-500/5">
-            <!-- Imagen promocional / Placeholder -->
-            <div class="relative h-48 w-full bg-slate-950 overflow-hidden">
-              {% if ev.promotional_image %}
-                <img
-                  src="{{ ev.promotional_image.url }}"
-                  alt="{{ ev.title|default:ev.titulo }}"
-                  class="h-full w-full object-cover transition duration-300 hover:scale-105"
-                >
-              {% elif ev.imagen_promocional %}
-                <img
-                  src="{{ ev.imagen_promocional.url }}"
-                  alt="{{ ev.title|default:ev.titulo }}"
-                  class="h-full w-full object-cover transition duration-300 hover:scale-105"
-                >
-              {% else %}
-                <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950/60 p-4 text-center">
-                  <span class="text-3xl font-black tracking-wider text-indigo-400/40">SODE</span>
-                </div>
-              {% endif %}
-
-              <!-- Badge de Afinidades / Recomendación -->
-              {% if item.is_recommended and user.is_authenticated %}
-                <div class="absolute top-3 right-3 rounded-full bg-indigo-600/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
-                  ★ {{ item.score_percentage }}% afinidad
-                </div>
-              {% elif item.score_percentage > 0 and user.is_authenticated %}
-                <div class="absolute top-3 right-3 rounded-full bg-slate-800/90 backdrop-blur-md px-2.5 py-0.5 text-xs font-medium text-slate-300">
-                  {{ item.score_percentage }}% afinidad
-                </div>
-              {% endif %}
-            </div>
-
-            <!-- Contenido del Evento -->
-            <div class="flex flex-1 flex-col p-5">
-              <!-- Organización promotora -->
-              {% if ev.organization or ev.organizacion %}
-                <p class="text-xs font-semibold uppercase tracking-wider text-indigo-400">
-                  {{ ev.organization.name|default:ev.organizacion.name|default:ev.organization|default:ev.organizacion }}
-                </p>
-              {% endif %}
-
-              <h3 class="mt-1 text-lg font-bold text-white leading-snug">
-                {{ ev.title|default:ev.titulo }}
-              </h3>
-
-              <p class="mt-2 line-clamp-2 text-sm text-slate-400">
-                {{ ev.description|default:ev.descripcion }}
-              </p>
-
-              <!-- Metadatos: Fecha, Ubicación, Capacidad -->
-              <div class="mt-4 space-y-1.5 text-xs text-slate-300 border-t border-slate-800/60 pt-3">
-                {% if ev.start_date or ev.fecha_inicio %}
-                  <div class="flex items-center gap-2">
-                    <span class="text-slate-500">📅</span>
-                    <span>{{ ev.start_date|default:ev.fecha_inicio|date:"d M Y, H:i" }}</span>
-                  </div>
-                {% endif %}
-
-                {% if ev.location or ev.ubicacion %}
-                  <div class="flex items-center gap-2">
-                    <span class="text-slate-500">📍</span>
-                    <span class="truncate">{{ ev.location|default:ev.ubicacion }}</span>
-                  </div>
-                {% endif %}
-
-                {% if ev.max_capacity or ev.capacidad_maxima %}
-                  <div class="flex items-center gap-2">
-                    <span class="text-slate-500">👥</span>
-                    <span>Cupo: {{ ev.max_capacity|default:ev.capacidad_maxima }} asistentes</span>
-                  </div>
-                {% endif %}
-              </div>
-
-              <!-- Razones de recomendación -->
-              {% if item.reasons and user.is_authenticated %}
-                <div class="mt-3 rounded-lg bg-indigo-950/40 border border-indigo-500/20 p-2 text-[11px] text-indigo-300">
-                  {% for reason in item.reasons %}
-                    <p class="leading-tight">• {{ reason }}</p>
-                  {% endfor %}
-                </div>
-              {% endif %}
-
-              <!-- Intereses / Etiquetas -->
-              {% if ev.interests.all or ev.intereses.all %}
-                <div class="mt-3 flex flex-wrap gap-1">
-                  {% for interest in ev.interests.all|default:ev.intereses.all %}
-                    <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
-                      #{{ interest.name }}
-                    </span>
-                  {% endfor %}
-                </div>
-              {% endif %}
-            </div>
-
-            <!-- Footer con acción -->
-            <div class="p-5 pt-0">
-              <a
-                href="#"
-                class="block w-full rounded-xl bg-slate-800 px-4 py-2.5 text-center text-xs font-semibold text-white transition hover:bg-indigo-600 focus:outline-none"
+        <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 shadow-lg transition hover:border-slate-700 hover:shadow-indigo-500/5">
+          <!-- Imagen promocional / Placeholder -->
+          <div class="relative h-48 w-full bg-slate-950 overflow-hidden">
+            {% if item.image_url %}
+              <img
+                src="{{ item.image_url }}"
+                alt="{{ item.title }}"
+                class="h-full w-full object-cover transition duration-300 hover:scale-105"
               >
-                Ver detalles del evento
-              </a>
+            {% else %}
+              <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950/60 p-4 text-center">
+                <span class="text-3xl font-black tracking-wider text-indigo-400/40">SODE</span>
+              </div>
+            {% endif %}
+
+            <!-- Badge de Afinidades / Recomendación -->
+            {% if item.is_recommended and user.is_authenticated %}
+              <div class="absolute top-3 right-3 rounded-full bg-indigo-600/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
+                ★ {{ item.score_percentage }}% afinidad
+              </div>
+            {% elif item.score_percentage > 0 and user.is_authenticated %}
+              <div class="absolute top-3 right-3 rounded-full bg-slate-800/90 backdrop-blur-md px-2.5 py-0.5 text-xs font-medium text-slate-300">
+                {{ item.score_percentage }}% afinidad
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Contenido del Evento -->
+          <div class="flex flex-1 flex-col p-5">
+            <!-- Organización promotora -->
+            {% if item.organization_name %}
+              <p class="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                {{ item.organization_name }}
+              </p>
+            {% endif %}
+
+            <h3 class="mt-1 text-lg font-bold text-white leading-snug">
+              {{ item.title }}
+            </h3>
+
+            <p class="mt-2 line-clamp-2 text-sm text-slate-400">
+              {{ item.description }}
+            </p>
+
+            <!-- Metadatos: Fecha, Ubicación, Capacidad -->
+            <div class="mt-4 space-y-1.5 text-xs text-slate-300 border-t border-slate-800/60 pt-3">
+              {% if item.start_date %}
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500">📅</span>
+                  <span>{{ item.start_date|date:"d M Y, H:i" }}</span>
+                </div>
+              {% endif %}
+
+              {% if item.location %}
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500">📍</span>
+                  <span class="truncate">{{ item.location }}</span>
+                </div>
+              {% endif %}
+
+              {% if item.capacity %}
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-500">👥</span>
+                  <span>Cupo: {{ item.capacity }} asistentes</span>
+                </div>
+              {% endif %}
             </div>
-          </article>
-        {% endwith %}
+
+            <!-- Razones de recomendación -->
+            {% if item.reasons and user.is_authenticated %}
+              <div class="mt-3 rounded-lg bg-indigo-950/40 border border-indigo-500/20 p-2 text-[11px] text-indigo-300">
+                {% for reason in item.reasons %}
+                  <p class="leading-tight">• {{ reason }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <!-- Intereses / Etiquetas -->
+            {% if item.interests %}
+              <div class="mt-3 flex flex-wrap gap-1">
+                {% for interest in item.interests %}
+                  <span class="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+                    #{{ interest }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Footer con acción -->
+          <div class="p-5 pt-0">
+            <a
+              href="#"
+              class="block w-full rounded-xl bg-slate-800 px-4 py-2.5 text-center text-xs font-semibold text-white transition hover:bg-indigo-600 focus:outline-none"
+            >
+              Ver detalles del evento
+            </a>
+          </div>
+        </article>
       {% endfor %}
     </div>
   {% else %}
