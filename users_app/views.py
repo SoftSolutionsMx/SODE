@@ -1,10 +1,11 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
 from django.db import transaction
 from django.shortcuts import redirect, render
 from allauth.account.views import LoginView
-from allauth.account.models import EmailAddress
+
+from email_service.services import send_verification_email
 
 from .forms import (
     AssistantSignupForm,
@@ -39,7 +40,7 @@ def assistant_signup(request):
         form = AssistantSignupForm(request.POST or None)
         if request.method == 'POST' and form.is_valid():
             user = form.save()
-            _configure_email_verification(request, user)
+            send_verification_email(request, user, signup=True)
             return redirect('signup_success')
     return render(request, 'users_app/signup.html', {'form': form, 'title': 'Crear cuenta de asistente'})
 
@@ -55,7 +56,7 @@ def organizer_signup(request):
                 description=form.cleaned_data['organization_description'],
                 event_type=form.cleaned_data['organization_event_type'],
             )
-            _configure_email_verification(request, user)
+            send_verification_email(request, user, signup=True)
             return redirect('signup_success')
     return render(request, 'users_app/signup.html', {'form': form, 'title': 'Crear cuenta de organizador'})
 
@@ -64,16 +65,6 @@ def signup_success(request):
     return render(request, 'users_app/signup_success.html', {
         'email_verification_enabled': settings.SODE_EMAIL_VERIFICATION,
     })
-
-
-def _configure_email_verification(request, user):
-    verified = not settings.SODE_EMAIL_VERIFICATION
-    email_address = EmailAddress.objects.create(
-        user=user, email=user.email, primary=True, verified=verified
-    )
-    if not verified:
-        email_address.send_confirmation(request, signup=True)
-    return email_address
 
 
 @login_required
@@ -89,11 +80,8 @@ def profile(request):
         )
         if user_form.is_valid() and (organization_form is None or organization_form.is_valid()):
             user = user_form.save()
-            if previous_email.lower() != user.email.lower():
-                EmailAddress.objects.filter(user=user).delete()
-                _configure_email_verification(request, user)
-            elif not EmailAddress.objects.filter(user=user, email__iexact=user.email).exists():
-                _configure_email_verification(request, user)
+            email_changed = previous_email.lower() != user.email.lower()
+            send_verification_email(request, user, signup=False, replace_existing=email_changed)
             if organization_form:
                 organization_form.save()
             messages.success(request, 'Tu perfil se actualizó correctamente.')

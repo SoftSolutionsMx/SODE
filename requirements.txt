@@ -2,3 +2,4 @@ Django==6.1.2
 django-allauth==65.20.0
 Pillow==13.0.0
 django-tailwind-cli==4.8.1
+python-dotenv==1.1.1
