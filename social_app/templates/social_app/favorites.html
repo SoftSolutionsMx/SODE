@@ -1,0 +1,74 @@
+{% extends "users_app/base.html" %}
+{% block title %}Mis Favoritos y Comunidades | SODE{% endblock %}
+{% block content %}
+<section class="mt-8 space-y-10">
+  <!-- Eventos Favoritos ("Me Interesa") -->
+  <div>
+    <div class="rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+      <p class="text-xs font-semibold uppercase tracking-widest text-pink-400">Preferencias y Afinidad</p>
+      <h1 class="mt-1 text-3xl font-extrabold text-white">Mis Eventos Favoritos ("Me Interesa")</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Eventos que has guardado y que alimentan tus recomendaciones personalizadas.
+      </p>
+    </div>
+
+    {% if favoritos %}
+      <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {% for fav in favoritos %}
+          <article class="flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-md">
+            <div>
+              <p class="text-xs font-semibold uppercase text-indigo-400">{{ fav.evento.organizacion.name }}</p>
+              <h2 class="mt-1 text-lg font-bold text-white">{{ fav.evento.titulo }}</h2>
+              <p class="mt-2 line-clamp-2 text-xs text-slate-400">{{ fav.evento.descripcion }}</p>
+              <div class="mt-4 space-y-1 text-xs text-slate-300 border-t border-slate-800 pt-3">
+                <div>📅 {{ fav.evento.fecha_inicio|date:"d M Y, H:i" }}</div>
+                <div>📍 {{ fav.evento.ubicacion }}</div>
+              </div>
+            </div>
+            <div class="mt-4 flex gap-2">
+              <a href="{% url 'event_detail' fav.evento.id %}" class="flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-indigo-500">
+                Ver Evento
+              </a>
+              <form method="post" action="{% url 'toggle_favorite_event' fav.evento.id %}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-xl border border-rose-700/50 bg-rose-950/40 px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-900">
+                  Quitar
+                </button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="mt-6 rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
+        Aún no has marcado eventos con "Me Interesa". Explora el <a href="{% url 'discovery' %}" class="text-indigo-400 underline">catálogo de eventos</a>.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Directorio de Organizaciones y Seguimientos -->
+  <div>
+    <h2 class="text-2xl font-bold text-white">Organizaciones en SODE</h2>
+    <p class="text-sm text-slate-400">Sigue a tus organizaciones favoritas para recibir notificaciones automáticas por correo cuando publiquen un nuevo evento.</p>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {% for org in all_organizations %}
+        <div class="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <div>
+            <h3 class="font-bold text-white">{{ org.name }}</h3>
+            <p class="mt-1 text-xs text-slate-400">{{ org.description|default:"Organización verificada en SODE" }}</p>
+          </div>
+          <form method="post" action="{% url 'toggle_follow_organization' org.id %}">
+            {% csrf_token %}
+            <button type="submit" class="rounded-xl px-3.5 py-2 text-xs font-semibold transition {% if org.id in followed_org_ids %}border border-slate-700 bg-slate-800 text-slate-300 hover:bg-rose-950 hover:text-rose-200{% else %}bg-indigo-600 text-white hover:bg-indigo-500{% endif %}">
+              {% if org.id in followed_org_ids %}Dejar de seguir{% else %}Seguir{% endif %}
+            </button>
+          </form>
+        </div>
+      {% empty %}
+        <p class="text-sm text-slate-500">No hay organizaciones registradas aún.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

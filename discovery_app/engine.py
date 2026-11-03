@@ -327,7 +327,7 @@ class RecommendationEngine:
 
         for ev in events:
             status = str(getattr(ev, 'status', None) or getattr(ev, 'estado', 'published')).strip().lower()
-            if status in ('draft', 'borrador'):
+            if status in ('draft', 'borrador', 'cancelado', 'cancelled', 'canceled'):
                 continue
 
             if q_clean:

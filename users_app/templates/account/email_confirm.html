@@ -17,14 +17,17 @@
   {% if confirmation %}
     {% user_display confirmation.email_address.user as user_display %}
     {% if can_confirm %}
+      <div class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-950/50 p-4 text-emerald-200 text-sm font-medium">
+        Cuenta activada exitosamente
+      </div>
       <p class="mt-4 text-slate-300">
-        Por favor, confirma que la dirección de correo <strong class="text-white">{{ confirmation.email_address.email }}</strong> pertenece a tu cuenta de SODE (<span class="text-indigo-300">{{ user_display }}</span>).
+        La dirección de correo <strong class="text-white">{{ confirmation.email_address.email }}</strong> pertenece a tu cuenta de SODE (<span class="text-indigo-300">{{ user_display }}</span>).
       </p>
 
       <form class="mt-8" method="post" action="{% url 'account_confirm_email' confirmation.key %}">
         {% csrf_token %}
         <button class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30" type="submit">
-          Confirmar correo electrónico
+          Confirmar correo electrónico y continuar
         </button>
       </form>
     {% else %}
@@ -48,4 +51,3 @@
   {% endif %}
 </section>
 {% endblock %}
-

@@ -1,0 +1,164 @@
+{% extends "users_app/base.html" %}
+{% block title %}Mis Eventos | Panel de Control SODE{% endblock %}
+{% block content %}
+<section class="mt-8">
+  <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">
+        {{ organization.name|default:user.username }}
+      </p>
+      <h1 class="mt-1 text-3xl font-extrabold text-white">Panel de Control de Eventos</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Administra tus convocatorias en borrador, publica eventos y gestiona el aforo y listas de espera.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
+        <span class="block text-lg font-bold text-indigo-400">{{ seguidores_count }}</span>
+        <span class="text-[11px] text-slate-400">Seguidores</span>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
+        <span class="block text-lg font-bold text-emerald-400">{{ publicados_count }}</span>
+        <span class="text-[11px] text-slate-400">Publicados</span>
+      </div>
+      <div class="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
+        <span class="block text-lg font-bold text-amber-400">{{ borradores_count }}</span>
+        <span class="text-[11px] text-slate-400">Borradores</span>
+      </div>
+      <a href="{% url 'create_event' %}" class="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition">
+        + Crear Nuevo Evento
+      </a>
+    </div>
+  </div>
+
+  {% if created_event %}
+    <div class="mt-6 rounded-2xl border border-indigo-500/40 bg-indigo-950/30 p-5 flex flex-wrap items-center justify-between gap-4" data-event-id="{{ created_event.id }}">
+      <div class="flex items-center gap-4">
+        {% if created_event.imagen_promocional %}
+          <img
+            src="{{ created_event.imagen_promocional.url }}"
+            alt="Miniatura de {{ created_event.titulo }}"
+            class="h-16 w-24 rounded-xl object-cover border border-indigo-500/40"
+          >
+        {% endif %}
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-indigo-300">
+            Evento ID #{{ created_event.id }} • Estado: {{ created_event.estado }}
+          </span>
+          <h2 class="text-lg font-bold text-white">{{ created_event.titulo }}</h2>
+          <p class="text-xs text-slate-300">Evento guardado correctamente</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        {% if created_event.estado == 'Borrador' %}
+          <form method="post" action="{% url 'publish_event' created_event.id %}">
+            {% csrf_token %}
+            <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500">
+              Publicar Evento
+            </button>
+          </form>
+        {% endif %}
+        <a href="{% url 'event_detail' created_event.id %}" class="rounded-lg bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+          Ver Vista Previa
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if eventos %}
+    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for ev in eventos %}
+        <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg" data-event-id="{{ ev.id }}">
+          <div>
+            <div class="relative h-44 w-full bg-slate-950 overflow-hidden">
+              {% if ev.imagen_promocional %}
+                <img src="{{ ev.imagen_promocional.url }}" alt="{{ ev.titulo }}" class="h-full w-full object-cover">
+              {% else %}
+                <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950/60">
+                  <span class="text-2xl font-black tracking-widest text-indigo-400/40">SODE</span>
+                </div>
+              {% endif %}
+              <div class="absolute top-3 left-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-mono text-slate-300">
+                ID: {{ ev.id }}
+              </div>
+              <div class="absolute top-3 right-3">
+                {% if ev.estado == 'Publicado' %}
+                  <span class="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow">Publicado</span>
+                {% elif ev.estado == 'Borrador' %}
+                  <span class="rounded-full bg-amber-600 px-3 py-1 text-xs font-bold text-white shadow">Borrador</span>
+                {% else %}
+                  <span class="rounded-full bg-rose-700 px-3 py-1 text-xs font-bold text-white shadow">{{ ev.estado }}</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="p-5">
+              <h3 class="text-lg font-bold text-white">{{ ev.titulo }}</h3>
+              <p class="mt-1 line-clamp-2 text-xs text-slate-400">{{ ev.descripcion }}</p>
+
+              <div class="mt-4 space-y-1.5 border-t border-slate-800 pt-3 text-xs text-slate-300">
+                <div>📅 {{ ev.fecha_inicio|date:"d M Y, H:i" }}</div>
+                <div>📍 {{ ev.ubicacion }}</div>
+                <div class="flex items-center justify-between pt-1">
+                  <span>👥 Confirmados: <strong>{{ ev.confirmados_count }} / {{ ev.capacidad_maxima }}</strong></span>
+                  <span class="text-amber-300">⏳ En espera: <strong>{{ ev.lista_espera_count }}</strong></span>
+                </div>
+                <div>📝 Preguntas del formulario: {{ ev.preguntas.count }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 bg-slate-950/50 p-4 space-y-2">
+            <div class="flex flex-wrap gap-2">
+              {% if ev.estado == 'Borrador' %}
+                <form method="post" action="{% url 'publish_event' ev.id %}" class="flex-1">
+                  {% csrf_token %}
+                  <button type="submit" class="w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition">
+                    Publicar Evento
+                  </button>
+                </form>
+              {% elif ev.estado == 'Publicado' %}
+                <form method="post" action="{% url 'unpublish_event' ev.id %}" class="flex-1">
+                  {% csrf_token %}
+                  <button type="submit" class="w-full rounded-xl border border-amber-600/50 bg-amber-950/40 px-3 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-900/60 transition">
+                    Cambiar a Borrador
+                  </button>
+                </form>
+              {% endif %}
+
+              <a href="{% url 'event_attendees' ev.id %}" class="flex-1 rounded-xl bg-indigo-600 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                Asistentes ({{ ev.confirmados_count }}/{{ ev.capacidad_maxima }})
+              </a>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <a href="{% url 'event_detail' ev.id %}" class="text-xs font-medium text-slate-400 hover:text-white">
+                Ver página
+              </a>
+              <a href="{% url 'edit_event' ev.id %}" class="text-xs font-medium text-indigo-400 hover:text-indigo-300">
+                Editar
+              </a>
+              {% if ev.estado != 'Cancelado' %}
+                <form method="post" action="{% url 'cancel_event' ev.id %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs font-medium text-rose-400 hover:text-rose-300">
+                    Cancelar
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="mt-8 rounded-2xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
+      <h3 class="text-lg font-bold text-white">Aún no has creado eventos</h3>
+      <p class="mt-2 text-sm text-slate-400">Comienza creando un evento en borrador o publícalo directamente para tu comunidad.</p>
+      <a href="{% url 'create_event' %}" class="mt-6 inline-block rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-500">
+        Crear mi primer evento
+      </a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

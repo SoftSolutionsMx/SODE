@@ -1,10 +1,12 @@
 import logging
+import os
 from typing import Iterable, List, Optional, Union
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import validate_email
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -184,12 +186,6 @@ def send_verification_email(request, user, signup: bool = True, replace_existing
     """
     Configura y envía el correo de verificación para un usuario según la configuración del sistema.
     Reemplaza la lógica previa de verificación de correo en users_app.
-
-    :param request: Objeto HttpRequest actual.
-    :param user: Instancia del usuario recién creado o actualizado.
-    :param signup: Indica si la verificación proviene del flujo de registro.
-    :param replace_existing: Si es True, elimina registros de correos anteriores del usuario.
-    :return: Instancia de EmailAddress de django-allauth.
     """
     from allauth.account.models import EmailAddress
 
@@ -221,6 +217,165 @@ def send_verification_email(request, user, signup: bool = True, replace_existing
     return email_address
 
 
+def _build_event_url(evento, request=None) -> str:
+    try:
+        path = reverse('event_detail', kwargs={'event_id': evento.pk})
+    except Exception:
+        path = f"/events/{evento.pk}/"
+    if request is not None and hasattr(request, 'build_absolute_uri'):
+        return request.build_absolute_uri(path)
+    return f"http://localhost:8000{path}"
+
+
+def send_new_event_notification(evento, request=None) -> int:
+    """
+    Envía notificación por correo a todos los seguidores de la organización
+    cuando se publica un nuevo evento (RF 4.3, CP-ACE-03).
+    Asunto: 'Nuevo evento publicado: <Titulo del Evento>'
+    """
+    from social_app.models import Seguimiento
+
+    org = getattr(evento, 'organizacion', None)
+    if not org:
+        return 0
+
+    event_url = _build_event_url(evento, request=request)
+    subject = f"Nuevo evento publicado: {evento.titulo}"
+    seguimientos = Seguimiento.objects.filter(organizacion=org).select_related('asistente')
+
+    sent_total = 0
+    for seg in seguimientos:
+        follower = seg.asistente
+        if not follower or not follower.email:
+            continue
+        message = (
+            f"Hola {follower.username},\n\n"
+            f"La organización {org.name} ha publicado un nuevo evento en SODE:\n\n"
+            f"Título: {evento.titulo}\n"
+            f"Descripción: {evento.descripcion}\n"
+            f"Ubicación: {evento.ubicacion}\n"
+            f"Fecha de inicio: {evento.fecha_inicio}\n\n"
+            f"Consulta los detalles e inscríbete en el siguiente enlace:\n"
+            f"{event_url}\n"
+        )
+        html_message = (
+            f"<p>Hola <strong>{follower.username}</strong>,</p>"
+            f"<p>La organización <strong>{org.name}</strong> ha publicado un nuevo evento en SODE:</p>"
+            f"<h3>{evento.titulo}</h3>"
+            f"<p>{evento.descripcion}</p>"
+            f"<p><strong>Ubicación:</strong> {evento.ubicacion}</p>"
+            f"<p><a href='{event_url}'>Ver detalles e inscribirse al evento</a></p>"
+        )
+        sent_total += send_to_one(
+            recipient=follower.email,
+            subject=subject,
+            message=message,
+            html_message=html_message,
+            fail_silently=True,
+        )
+    return sent_total
+
+
+def send_manual_admission_email(inscripcion, request=None) -> int:
+    """
+    Envía correo de confirmación cuando un organizador admite manualmente
+    a un asistente desde la Lista de Espera (RF 3.4, CP-ACE-05).
+    Asunto: 'Tu entrada ha sido confirmada: <Titulo del Evento>'
+    """
+    evento = inscripcion.evento
+    asistente = inscripcion.asistente
+    if not asistente or not asistente.email:
+        return 0
+
+    event_url = _build_event_url(evento, request=request)
+    subject = f"Tu entrada ha sido confirmada: {evento.titulo}"
+    message = (
+        f"Hola {asistente.username},\n\n"
+        f"¡Buenas noticias! El organizador ha admitido tu solicitud y tu entrada "
+        f"para el evento '{evento.titulo}' ha sido confirmada.\n\n"
+        f"Ubicación: {evento.ubicacion}\n"
+        f"Fecha: {evento.fecha_inicio}\n"
+        f"Detalles del evento: {event_url}\n"
+    )
+    return send_to_one(
+        recipient=asistente.email,
+        subject=subject,
+        message=message,
+        fail_silently=True,
+    )
+
+
+def send_waitlist_promotion_email(inscripcion, request=None) -> int:
+    """
+    Envía correo automático cuando se libera un cupo y el primer aspirante
+    en Lista de Espera es promovido automáticamente a Confirmado (CP-ACE-06).
+    Asunto: 'Lugar asignado: <Titulo del Evento>'
+    """
+    evento = inscripcion.evento
+    asistente = inscripcion.asistente
+    if not asistente or not asistente.email:
+        return 0
+
+    event_url = _build_event_url(evento, request=request)
+    subject = f"Lugar asignado: {evento.titulo}"
+    message = (
+        f"Hola {asistente.username},\n\n"
+        f"Se ha liberado un cupo en el evento '{evento.titulo}' y tu registro "
+        f"en la Lista de Espera ha sido promovido automáticamente a Confirmado.\n\n"
+        f"Ubicación: {evento.ubicacion}\n"
+        f"Fecha: {evento.fecha_inicio}\n"
+        f"Consulta tu inscripción en: {event_url}\n"
+    )
+    return send_to_one(
+        recipient=asistente.email,
+        subject=subject,
+        message=message,
+        fail_silently=True,
+    )
+
+
+def send_event_change_or_cancel_notification(evento, cancelado: bool = False, request=None) -> int:
+    """
+    Envía avisos por correo a todos los asistentes inscritos cuando un evento
+    es modificado de horario o cancelado (RF 2.4).
+    """
+    from registrations_app.models import Inscripcion
+
+    inscripciones = Inscripcion.objects.filter(
+        evento=evento,
+        estado__in=[Inscripcion.Estados.CONFIRMADO, Inscripcion.Estados.LISTA_ESPERA],
+    ).select_related('asistente')
+
+    accion_str = "Evento cancelado" if cancelado else "Actualización de evento"
+    subject = f"{accion_str}: {evento.titulo}"
+    event_url = _build_event_url(evento, request=request)
+
+    sent_total = 0
+    for insc in inscripciones:
+        if not insc.asistente or not insc.asistente.email:
+            continue
+        if cancelado:
+            body = (
+                f"Hola {insc.asistente.username},\n\n"
+                f"Lamentamos informarte que el evento '{evento.titulo}' ha sido cancelado por la organización.\n"
+            )
+        else:
+            body = (
+                f"Hola {insc.asistente.username},\n\n"
+                f"El evento '{evento.titulo}' ha actualizado su información o programación.\n"
+                f"Nueva fecha de inicio: {evento.fecha_inicio}\n"
+                f"Ubicación: {evento.ubicacion}\n"
+                f"Más información en: {event_url}\n"
+            )
+        sent_total += send_to_one(
+            recipient=insc.asistente.email,
+            subject=subject,
+            message=body,
+            fail_silently=True,
+        )
+    return sent_total
+
+
 class EmailService:
     """Clase de servicio que agrupa las operaciones de correo electrónico."""
 
@@ -228,4 +383,7 @@ class EmailService:
     send_to_many = staticmethod(send_to_many)
     send_email = staticmethod(send_email)
     send_verification_email = staticmethod(send_verification_email)
-
+    send_new_event_notification = staticmethod(send_new_event_notification)
+    send_manual_admission_email = staticmethod(send_manual_admission_email)
+    send_waitlist_promotion_email = staticmethod(send_waitlist_promotion_email)
+    send_event_change_or_cancel_notification = staticmethod(send_event_change_or_cancel_notification)

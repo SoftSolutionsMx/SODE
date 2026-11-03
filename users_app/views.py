@@ -1,9 +1,11 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import Http404
 from django.shortcuts import redirect, render
-from allauth.account.views import LoginView
+from allauth.account.views import ConfirmEmailView, LoginView
 
 from email_service.services import send_verification_email
 
@@ -12,15 +14,29 @@ from .forms import (
     OrganizationProfileForm,
     OrganizerSignupForm,
     ProfileForm,
+    SiteLoginForm,
 )
 from .models import Organization
 
 
 def home(request):
-    return render(request, 'users_app/home.html')
+    featured_events = []
+    try:
+        from events_app.models import Evento
+        featured_events = list(
+            Evento.objects.filter(estado=Evento.Estados.PUBLICADO)
+            .select_related('organizacion')
+            .prefetch_related('intereses')[:6]
+        )
+    except Exception:
+        featured_events = []
+    return render(request, 'users_app/home.html', {
+        'featured_events': featured_events,
+    })
 
 
 class SiteLoginView(LoginView):
+    form_class = SiteLoginForm
     template_name = 'users_app/login.html'
 
     def form_valid(self, form):
@@ -29,6 +45,67 @@ class SiteLoginView(LoginView):
 
 
 login = SiteLoginView.as_view()
+
+
+class SodeConfirmEmailView(ConfirmEmailView):
+    template_name = 'account/email_confirm.html'
+
+    def get(self, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+        except Http404:
+            self.object = None
+
+        if self.object is not None:
+            email_address = self.object.email_address
+            try:
+                self.object.confirm(self.request)
+            except Exception:
+                pass
+            if not email_address.verified:
+                email_address.verified = True
+                email_address.save(update_fields=['verified'])
+            auth_login(
+                self.request,
+                email_address.user,
+                backend='django.contrib.auth.backends.ModelBackend',
+            )
+            messages.success(self.request, 'Cuenta activada exitosamente')
+
+        context = self.get_context_data()
+        if self.object is not None:
+            context['can_confirm'] = True
+            context['activated'] = True
+        return self.render_to_response(context)
+
+    def post(self, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+        except Http404:
+            self.object = None
+
+        if self.object is not None:
+            email_address = self.object.email_address
+            try:
+                self.object.confirm(self.request)
+            except Exception:
+                pass
+            if not email_address.verified:
+                email_address.verified = True
+                email_address.save(update_fields=['verified'])
+            auth_login(
+                self.request,
+                email_address.user,
+                backend='django.contrib.auth.backends.ModelBackend',
+            )
+            messages.success(self.request, 'Cuenta activada exitosamente')
+            return redirect('home')
+
+        context = self.get_context_data()
+        return self.render_to_response(context)
+
+
+confirm_email = SodeConfirmEmailView.as_view()
 
 
 def signup_disabled(request):
@@ -41,6 +118,10 @@ def assistant_signup(request):
         with transaction.atomic():
             user = form.save()
         send_verification_email(request, user, signup=True)
+        messages.info(
+            request,
+            'Se ha enviado un correo de verificación a tu bandeja de entrada. Revisa tu correo para activar tu cuenta.',
+        )
         return redirect('signup_success')
     return render(request, 'users_app/signup.html', {'form': form, 'title': 'Crear cuenta de asistente'})
 
@@ -54,9 +135,13 @@ def organizer_signup(request):
                 user=user,
                 name=user.username,
                 description=form.cleaned_data.get('organization_description', ''),
-                event_type=form.cleaned_data.get('organization_event_type', ''),
+                event_type=form.cleaned_data.get('organization_event_type', '') or 'General',
             )
         send_verification_email(request, user, signup=True)
+        messages.info(
+            request,
+            'Se ha enviado un correo de verificación a tu bandeja de entrada. Revisa tu correo para activar tu cuenta.',
+        )
         return redirect('signup_success')
     return render(request, 'users_app/signup.html', {'form': form, 'title': 'Crear cuenta de organizador'})
 
@@ -74,7 +159,7 @@ def profile(request):
         previous_email = request.user.email
         user_form = ProfileForm(request.POST, instance=request.user, user=request.user)
         organization_form = (
-            OrganizationProfileForm(request.POST, instance=organization)
+            OrganizationProfileForm(request.POST, request.FILES, instance=organization)
             if request.user.role == request.user.Roles.ORGANIZER and organization
             else None
         )

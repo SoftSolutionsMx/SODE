@@ -1,6 +1,80 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from allauth.account.forms import LoginForm
+from .models import Interest
+
+
+FORM_INPUT_CLASSES = (
+    'w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 '
+    'text-sm text-white placeholder-slate-500 focus:border-indigo-500 '
+    'focus:ring-1 focus:ring-indigo-500 focus:outline-none transition'
+)
+
+
+def _style_form_fields(form):
+    for name, field in form.fields.items():
+        if isinstance(field.widget, forms.CheckboxSelectMultiple):
+            continue
+        if isinstance(field.widget, (forms.FileInput, forms.ClearableFileInput)):
+            field.widget.attrs['class'] = (
+                'block w-full text-sm text-slate-300 file:mr-4 file:py-2.5 file:px-4 '
+                'file:rounded-xl file:border-0 file:text-sm file:font-semibold '
+                'file:bg-indigo-600/30 file:text-indigo-300 hover:file:bg-indigo-600/50 cursor-pointer'
+            )
+            continue
+        if isinstance(field.widget, forms.CheckboxInput):
+            field.widget.attrs['class'] = (
+                'h-4 w-4 rounded border-slate-700 bg-slate-950 text-indigo-600 accent-indigo-600 focus:ring-indigo-500 cursor-pointer'
+            )
+            continue
+        existing = field.widget.attrs.get('class', '')
+        field.widget.attrs['class'] = f"{existing} {FORM_INPUT_CLASSES}".strip()
+        if isinstance(field.widget, forms.Textarea):
+            field.widget.attrs.setdefault('rows', 3)
+
+
+class SiteLoginForm(LoginForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_form_fields(self)
+        if 'login' in self.fields:
+            self.fields['login'].label = 'Usuario o correo electrónico'
+            self.fields['login'].widget.attrs.update({
+                'placeholder': 'ejemplo@correo.com o tu usuario',
+                'autocomplete': 'username',
+            })
+        if 'password' in self.fields:
+            self.fields['password'].label = 'Contraseña'
+            self.fields['password'].widget.attrs.update({
+                'placeholder': 'Tu contraseña',
+                'autocomplete': 'current-password',
+            })
+        if 'remember' in self.fields:
+            self.fields['remember'].label = 'Recordarme'
+
+
+def _normalize_signup_data(data):
+    """
+    Normaliza diccionarios POST de registro para soportar tanto password1/password2
+    como un único campo 'password', además de alias de organización.
+    """
+    if not data:
+        return data
+    mutable = data.copy() if hasattr(data, 'copy') else dict(data)
+    if 'password' in mutable and 'password1' not in mutable:
+        mutable['password1'] = mutable['password']
+        if 'password2' not in mutable:
+            mutable['password2'] = mutable['password']
+    elif 'password1' in mutable and 'password2' not in mutable and 'password' in mutable:
+        mutable['password2'] = mutable['password1']
+    if 'organization_name' in mutable and 'username' not in mutable:
+        mutable['username'] = mutable['organization_name']
+    if 'description' in mutable and 'organization_description' not in mutable:
+        mutable['organization_description'] = mutable['description']
+    if 'event_type' in mutable and 'organization_event_type' not in mutable:
+        mutable['organization_event_type'] = mutable['event_type']
+    return mutable
 
 
 class BaseSignupForm(forms.ModelForm):
@@ -16,6 +90,26 @@ class BaseSignupForm(forms.ModelForm):
     class Meta:
         model = get_user_model()
         fields = ('username', 'email', 'first_name', 'last_name')
+
+    def __init__(self, *args, **kwargs):
+        if 'data' in kwargs and kwargs['data'] is not None:
+            kwargs['data'] = _normalize_signup_data(kwargs['data'])
+        elif len(args) > 0 and args[0] is not None:
+            args = (_normalize_signup_data(args[0]),) + args[1:]
+        super().__init__(*args, **kwargs)
+        _style_form_fields(self)
+        if 'username' in self.fields:
+            self.fields['username'].widget.attrs.setdefault('placeholder', 'Nombre de usuario')
+        if 'email' in self.fields:
+            self.fields['email'].widget.attrs.setdefault('placeholder', 'ejemplo@correo.com')
+        if 'first_name' in self.fields:
+            self.fields['first_name'].widget.attrs.setdefault('placeholder', 'Tu nombre')
+        if 'last_name' in self.fields:
+            self.fields['last_name'].widget.attrs.setdefault('placeholder', 'Tus apellidos')
+        if 'password1' in self.fields:
+            self.fields['password1'].widget.attrs.setdefault('placeholder', 'Mínimo 8 caracteres (mayúscula, minúscula, número)')
+        if 'password2' in self.fields:
+            self.fields['password2'].widget.attrs.setdefault('placeholder', 'Repite tu contraseña')
 
     def clean_email(self):
         email = self.cleaned_data['email'].lower()
@@ -51,39 +145,45 @@ class BaseSignupForm(forms.ModelForm):
 
 
 class AssistantSignupForm(BaseSignupForm):
+    interests = forms.ModelMultipleChoiceField(
+        queryset=Interest.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label='Intereses temáticos',
+    )
+
+    class Meta(BaseSignupForm.Meta):
+        fields = ('username', 'email', 'first_name', 'last_name', 'interests')
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = get_user_model().Roles.ASSISTANT
         if commit:
             user.save()
+            if 'interests' in self.cleaned_data and self.cleaned_data['interests']:
+                user.interests.set(self.cleaned_data['interests'])
         return user
 
 
 class OrganizerSignupForm(BaseSignupForm):
     organization_event_type = forms.CharField(
-        label='Tipología de eventos', min_length=1, max_length=200
+        label='Tipología de eventos', min_length=1, max_length=200, required=False
     )
     organization_description = forms.CharField(
         label='Descripción de la organización', widget=forms.Textarea, required=False
     )
 
     def __init__(self, *args, **kwargs):
-        # Compatibilidad: mapear organization_name legado a username si viene en la petición
-        if 'data' in kwargs and kwargs['data']:
-            data = kwargs['data'].copy()
-            if 'organization_name' in data and 'username' not in data:
-                data['username'] = data['organization_name']
-            kwargs['data'] = data
-        elif len(args) > 0 and args[0]:
-            data = args[0].copy() if hasattr(args[0], 'copy') else dict(args[0])
-            if 'organization_name' in data and 'username' not in data:
-                data['username'] = data['organization_name']
-            args = (data,) + args[1:]
-
         super().__init__(*args, **kwargs)
         # Para organizaciones, el campo de nombre de usuario es el nombre de la organización
         self.fields['username'].label = 'Nombre de la organización'
         self.fields['username'].help_text = 'Este nombre identificará a tu organización y servirá para iniciar sesión.'
+        self.fields['username'].widget.attrs['placeholder'] = 'Nombre de la organización'
+        if 'organization_event_type' in self.fields:
+            self.fields['organization_event_type'].widget.attrs['placeholder'] = 'Ej. Tecnología, Académicos, Culturales...'
+        if 'organization_description' in self.fields:
+            self.fields['organization_description'].widget.attrs['placeholder'] = 'Describe brevemente las actividades que realiza la organización...'
+        _style_form_fields(self)
 
     def clean_username(self):
         username = self.cleaned_data['username'].strip()
@@ -120,6 +220,15 @@ class ProfileForm(forms.ModelForm):
         self.user = user or self.instance
         if self.user and getattr(self.user, 'role', None) == get_user_model().Roles.ORGANIZER:
             self.fields['username'].label = 'Nombre de la organización'
+        _style_form_fields(self)
+        if 'first_name' in self.fields:
+            self.fields['first_name'].widget.attrs.setdefault('placeholder', 'Tu nombre')
+        if 'last_name' in self.fields:
+            self.fields['last_name'].widget.attrs.setdefault('placeholder', 'Tus apellidos')
+        if 'email' in self.fields:
+            self.fields['email'].widget.attrs.setdefault('placeholder', 'ejemplo@correo.com')
+        if 'location' in self.fields:
+            self.fields['location'].widget.attrs.setdefault('placeholder', 'Ej. Ciudad de México, Mérida...')
 
     def clean_email(self):
         email = self.cleaned_data['email'].lower()
@@ -143,9 +252,20 @@ class OrganizationProfileForm(forms.ModelForm):
 
     class Meta:
         model = get_user_model().organization.field.related_model
-        fields = ('name', 'description', 'event_type')
+        fields = ('name', 'description', 'event_type', 'logo')
         labels = {
             'name': 'Nombre de la organización',
             'description': 'Descripción',
             'event_type': 'Tipología de eventos',
+            'logo': 'Logo institucional',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_form_fields(self)
+        if 'name' in self.fields:
+            self.fields['name'].widget.attrs.setdefault('placeholder', 'Nombre de la organización')
+        if 'event_type' in self.fields:
+            self.fields['event_type'].widget.attrs.setdefault('placeholder', 'Ej. Tecnología, Cultura, Deportes...')
+        if 'description' in self.fields:
+            self.fields['description'].widget.attrs.setdefault('placeholder', 'Descripción de la organización...')

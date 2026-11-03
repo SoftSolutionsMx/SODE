@@ -1,0 +1,265 @@
+{% extends "users_app/base.html" %}
+{% block title %}{% if is_edit %}Editar Evento{% else %}Crear Evento{% endif %} | SODE{% endblock %}
+{% block content %}
+<section class="mx-auto my-8 max-w-4xl rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-10">
+  <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">Gestión de Convocatorias</p>
+      <h1 class="mt-1 text-3xl font-extrabold text-white">
+        {% if is_edit %}Editar Evento: {{ evento.titulo }}{% else %}Crear Nuevo Evento{% endif %}
+      </h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Configura los datos generales, la imagen promocional (JPG/PNG máx. 10 MB) y el cuestionario de inscripción.
+      </p>
+    </div>
+    <a href="{% url 'my_events' %}" class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700">
+      ← Volver a Mis Eventos
+    </a>
+  </div>
+
+  {% if form.errors %}
+    <div class="mt-6 rounded-xl border border-rose-700 bg-rose-950/60 p-4 text-sm text-rose-200">
+      <p class="font-bold">Por favor corrige los siguientes errores:</p>
+      <ul class="mt-2 list-disc pl-5 space-y-1">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="mt-8 space-y-6" novalidate>
+    {% csrf_token %}
+
+    <div class="grid gap-6 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label for="id_titulo" class="block text-sm font-semibold text-slate-200">Título del Evento (1-100 caracteres) *</label>
+        <input
+          type="text"
+          name="titulo"
+          id="id_titulo"
+          maxlength="100"
+          required
+          value="{{ form.titulo.value|default:'' }}"
+          placeholder="Ej. Conferencia de Tecnología SODE 2026"
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="id_descripcion" class="block text-sm font-semibold text-slate-200">Descripción detallada (máx. 1000 caracteres) *</label>
+        <textarea
+          name="descripcion"
+          id="id_descripcion"
+          rows="4"
+          maxlength="1000"
+          required
+          placeholder="Describe el objetivo, temario y público objetivo del evento..."
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >{{ form.descripcion.value|default:'' }}</textarea>
+      </div>
+
+      <div>
+        <label for="id_ubicacion" class="block text-sm font-semibold text-slate-200">Ubicación (Física o Enlace Virtual) *</label>
+        <input
+          type="text"
+          name="ubicacion"
+          id="id_ubicacion"
+          value="{{ form.ubicacion.value|default:'' }}"
+          placeholder="Ej. Mérida, Yucatán o Enlace Zoom"
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >
+      </div>
+
+      <div>
+        <label for="id_capacidad_maxima" class="block text-sm font-semibold text-slate-200">Capacidad Máxima (Cupo límite) *</label>
+        <input
+          type="number"
+          name="capacidad_maxima"
+          id="id_capacidad_maxima"
+          min="1"
+          required
+          value="{{ form.capacidad_maxima.value|default:'50' }}"
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >
+      </div>
+
+      <div>
+        <label for="id_fecha_inicio" class="block text-sm font-semibold text-slate-200">Fecha y Hora de Inicio *</label>
+        <input
+          type="datetime-local"
+          name="fecha_inicio"
+          id="id_fecha_inicio"
+          required
+          value="{% if form.fecha_inicio.value %}{{ form.fecha_inicio.value|date:'Y-m-d\TH:i'|default:form.fecha_inicio.value }}{% endif %}"
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >
+      </div>
+
+      <div>
+        <label for="id_fecha_fin" class="block text-sm font-semibold text-slate-200">Fecha y Hora de Fin *</label>
+        <input
+          type="datetime-local"
+          name="fecha_fin"
+          id="id_fecha_fin"
+          required
+          value="{% if form.fecha_fin.value %}{{ form.fecha_fin.value|date:'Y-m-d\TH:i'|default:form.fecha_fin.value }}{% endif %}"
+          class="mt-1.5 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+        >
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="id_imagen_promocional" class="block text-sm font-semibold text-slate-200">
+          Imagen Promocional / Banner (.jpg, .jpeg, .png — máx. 10 MB)
+        </label>
+        {% if evento and evento.imagen_promocional %}
+          <div class="mt-2 mb-3 flex items-center gap-3">
+            <img src="{{ evento.imagen_promocional.url }}" alt="{{ evento.titulo }}" class="h-16 w-24 rounded-lg object-cover border border-slate-700">
+            <span class="text-xs text-slate-400">Imagen actual cargada</span>
+          </div>
+        {% endif %}
+        <input
+          type="file"
+          name="imagen_promocional"
+          id="id_imagen_promocional"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+          class="mt-1.5 block w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-500"
+        >
+      </div>
+
+      {% if form.fields.intereses.queryset %}
+      <div class="sm:col-span-2">
+        <span class="block text-sm font-semibold text-slate-200 mb-2">Categorías e Intereses Temáticos</span>
+        <div class="flex flex-wrap gap-3">
+          {% for checkbox in form.intereses %}
+            <label class="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 cursor-pointer hover:border-indigo-500">
+              {{ checkbox.tag }}
+              <span>{{ checkbox.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Constructor Dinámico de Cuestionario (RF 3.1) -->
+    <div class="mt-8 border-t border-slate-800 pt-6">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-white">Cuestionario Dinámico de Inscripción</h2>
+          <p class="text-xs text-slate-400">Agrega preguntas personalizadas (abiertas cortas, abiertas largas o de opción múltiple) para los asistentes.</p>
+        </div>
+        <button
+          type="button"
+          onclick="addQuestionRow()"
+          class="rounded-lg bg-slate-800 border border-slate-700 px-3 py-1.5 text-xs font-semibold text-indigo-300 hover:bg-slate-700"
+        >
+          + Agregar Pregunta
+        </button>
+      </div>
+
+      <div id="questions-container" class="mt-4 space-y-3">
+        {% if existing_questions %}
+          {% for q in existing_questions %}
+            <div class="question-row grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 sm:grid-cols-12">
+              <div class="sm:col-span-5">
+                <label class="block text-xs font-medium text-slate-400">Pregunta</label>
+                <input type="text" name="pregunta_texto" value="{{ q.texto }}" placeholder="Ej. ¿Empresa u organización?" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-xs font-medium text-slate-400">Tipo</label>
+                <select name="pregunta_tipo" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+                  <option value="corta" {% if q.tipo == 'corta' %}selected{% endif %}>Abierta corta</option>
+                  <option value="opcion_multiple" {% if q.tipo == 'opcion_multiple' %}selected{% endif %}>Opción múltiple</option>
+                  <option value="larga" {% if q.tipo == 'larga' %}selected{% endif %}>Abierta larga</option>
+                </select>
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-xs font-medium text-slate-400">Opciones (separadas por coma)</label>
+                <input type="text" name="pregunta_opciones" value="{{ q.opciones|join:', ' }}" placeholder="Ej. Junior, Mid, Senior" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+              </div>
+              <div class="sm:col-span-1 flex items-end justify-end">
+                <button type="button" onclick="this.closest('.question-row').remove()" class="rounded-lg bg-rose-950/60 border border-rose-800/50 px-2.5 py-2 text-xs text-rose-300 hover:bg-rose-900">✕</button>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="question-row grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 sm:grid-cols-12">
+            <div class="sm:col-span-5">
+              <label class="block text-xs font-medium text-slate-400">Pregunta</label>
+              <input type="text" name="pregunta_texto" placeholder="Ej. ¿Empresa u organización?" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-xs font-medium text-slate-400">Tipo</label>
+              <select name="pregunta_tipo" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+                <option value="corta">Abierta corta</option>
+                <option value="opcion_multiple">Opción múltiple</option>
+                <option value="larga">Abierta larga</option>
+              </select>
+            </div>
+            <div class="sm:col-span-3">
+              <label class="block text-xs font-medium text-slate-400">Opciones (si es opción múltiple)</label>
+              <input type="text" name="pregunta_opciones" placeholder="Ej. Junior, Mid, Senior" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+            </div>
+            <div class="sm:col-span-1 flex items-end justify-end">
+              <button type="button" onclick="this.closest('.question-row').remove()" class="rounded-lg bg-rose-950/60 border border-rose-800/50 px-2.5 py-2 text-xs text-rose-300 hover:bg-rose-900">✕</button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="mt-8 flex flex-wrap items-center justify-end gap-4 border-t border-slate-800 pt-6">
+      <button
+        type="submit"
+        name="accion"
+        value="Guardar como Borrador"
+        class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-700 transition"
+      >
+        Guardar como Borrador
+      </button>
+      <button
+        type="submit"
+        name="accion"
+        value="Publicar Evento"
+        class="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition"
+      >
+        Publicar Evento
+      </button>
+    </div>
+  </form>
+</section>
+
+<script>
+function addQuestionRow() {
+  const container = document.getElementById('questions-container');
+  const row = document.createElement('div');
+  row.className = 'question-row grid gap-3 rounded-xl border border-slate-800 bg-slate-950 p-4 sm:grid-cols-12';
+  row.innerHTML = `
+    <div class="sm:col-span-5">
+      <label class="block text-xs font-medium text-slate-400">Pregunta</label>
+      <input type="text" name="pregunta_texto" placeholder="Escribe la pregunta..." class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+    </div>
+    <div class="sm:col-span-3">
+      <label class="block text-xs font-medium text-slate-400">Tipo</label>
+      <select name="pregunta_tipo" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+        <option value="corta">Abierta corta</option>
+        <option value="opcion_multiple">Opción múltiple</option>
+        <option value="larga">Abierta larga</option>
+      </select>
+    </div>
+    <div class="sm:col-span-3">
+      <label class="block text-xs font-medium text-slate-400">Opciones (si es opción múltiple)</label>
+      <input type="text" name="pregunta_opciones" placeholder="Ej. Opción 1, Opción 2" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white">
+    </div>
+    <div class="sm:col-span-1 flex items-end justify-end">
+      <button type="button" onclick="this.closest('.question-row').remove()" class="rounded-lg bg-rose-950/60 border border-rose-800/50 px-2.5 py-2 text-xs text-rose-300 hover:bg-rose-900">✕</button>
+    </div>
+  `;
+  container.appendChild(row);
+}
+</script>
+{% endblock %}

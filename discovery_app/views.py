@@ -78,20 +78,17 @@ def load_all_events():
         return []
     try:
         qs = event_model.objects.all()
+        model_field_names = {f.name for f in event_model._meta.get_fields()}
         if hasattr(qs, 'select_related'):
-            for org_field in ('organization', 'organizacion'):
-                try:
+            for org_field in ('organizacion', 'organization'):
+                if org_field in model_field_names:
                     qs = qs.select_related(org_field)
                     break
-                except Exception:
-                    pass
         if hasattr(qs, 'prefetch_related'):
-            for int_field in ('interests', 'intereses'):
-                try:
+            for int_field in ('intereses', 'interests'):
+                if int_field in model_field_names:
                     qs = qs.prefetch_related(int_field)
                     break
-                except Exception:
-                    pass
         return list(qs)
     except Exception:
         return []
