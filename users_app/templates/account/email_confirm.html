@@ -1,0 +1,51 @@
+{% extends "users_app/base.html" %}
+{% load account %}
+
+{% block title %}Confirmar correo electrónico | SODE{% endblock %}
+
+{% block content %}
+<section class="mx-auto my-8 max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-10 text-center">
+  <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-900/50 text-indigo-400 mb-6">
+    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+    </svg>
+  </div>
+
+  <p class="text-sm font-semibold uppercase tracking-widest text-indigo-300">Verificación de cuenta</p>
+  <h1 class="mt-2 text-3xl font-bold text-white">Confirmar correo electrónico</h1>
+
+  {% if confirmation %}
+    {% user_display confirmation.email_address.user as user_display %}
+    {% if can_confirm %}
+      <p class="mt-4 text-slate-300">
+        Por favor, confirma que la dirección de correo <strong class="text-white">{{ confirmation.email_address.email }}</strong> pertenece a tu cuenta de SODE (<span class="text-indigo-300">{{ user_display }}</span>).
+      </p>
+
+      <form class="mt-8" method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+        {% csrf_token %}
+        <button class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30" type="submit">
+          Confirmar correo electrónico
+        </button>
+      </form>
+    {% else %}
+      <div class="mt-6 rounded-lg bg-amber-950/40 border border-amber-800/50 p-4 text-amber-200 text-sm">
+        No es posible confirmar este correo porque ya se encuentra confirmado por otra cuenta.
+      </div>
+      <a class="mt-6 inline-block rounded-lg bg-slate-800 px-5 py-3 font-semibold text-white hover:bg-slate-700" href="{% url 'account_login' %}">
+        Ir a iniciar sesión
+      </a>
+    {% endif %}
+  {% else %}
+    <div class="mt-6 rounded-lg bg-rose-950/40 border border-rose-800/50 p-4 text-rose-200 text-sm">
+      Este enlace de confirmación ha expirado o no es válido.
+    </div>
+    <p class="mt-4 text-slate-400 text-sm">
+      Si necesitas un nuevo enlace, por favor inicia sesión con tus datos o solicita un nuevo correo de confirmación.
+    </p>
+    <a class="mt-6 inline-block rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" href="{% url 'account_login' %}">
+      Ir a iniciar sesión
+    </a>
+  {% endif %}
+</section>
+{% endblock %}
+

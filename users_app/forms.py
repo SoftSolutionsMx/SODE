@@ -1,18 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from allauth.account.forms import LoginForm
-
-
-class CustomLoginForm(LoginForm):
-    """Formulario de inicio de sesión que permite identificarse con nombre de usuario o correo electrónico."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['login'].label = 'Usuario o correo electrónico'
-        self.fields['login'].widget.attrs.update({
-            'placeholder': 'Usuario o correo electrónico',
-        })
 
 
 class BaseSignupForm(forms.ModelForm):

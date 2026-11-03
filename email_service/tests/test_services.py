@@ -59,7 +59,9 @@ class EmailServiceUnitTests(TestCase):
             send_to_one(recipient="", subject="Test", message="Test")
 
     def test_send_to_one_fail_silently_true(self):
-        with patch("email_service.services.EmailMultiAlternatives.send", side_effect=Exception("Error de red")):
+        with patch("email_service.services.logger.error"), patch(
+            "email_service.services.EmailMultiAlternatives.send", side_effect=Exception("Error de red")
+        ):
             sent = send_to_one(
                 recipient="usuario@example.com",
                 subject="Test",
@@ -69,7 +71,9 @@ class EmailServiceUnitTests(TestCase):
             self.assertEqual(sent, 0)
 
     def test_send_to_one_fail_silently_false_raises(self):
-        with patch("email_service.services.EmailMultiAlternatives.send", side_effect=Exception("Error de red")):
+        with patch("email_service.services.logger.error"), patch(
+            "email_service.services.EmailMultiAlternatives.send", side_effect=Exception("Error de red")
+        ):
             with self.assertRaises(Exception):
                 send_to_one(
                     recipient="usuario@example.com",

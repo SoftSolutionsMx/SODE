@@ -76,15 +76,11 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-ACCOUNT_LOGIN_METHODS = {'email', 'username'}
-ACCOUNT_FORMS = {
-    'login': 'users_app.forms.CustomLoginForm',
-}
 SODE_EMAIL_VERIFICATION = os.getenv('SODE_EMAIL_VERIFICATION', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory' if SODE_EMAIL_VERIFICATION else 'none'
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1', 'password2']
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*']
 LOGIN_REDIRECT_URL = '/'
 SESSION_COOKIE_AGE = 30 * 24 * 60 * 60
 SESSION_SAVE_EVERY_REQUEST = True
@@ -92,7 +88,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'users_app' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -114,6 +110,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 30,
+        },
     }
 }
 
