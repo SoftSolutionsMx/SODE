@@ -20,15 +20,15 @@ class SignupTests(TestCase):
         self.assertRedirects(response, reverse('signup_success'))
         user = User.objects.get(email='assistant@example.com')
         self.assertEqual(user.role, User.Roles.ASSISTANT)
+        self.assertEqual(user.username, 'ana-asistente')
         self.assertTrue(EmailAddress.objects.get(user=user).verified)
 
     def test_organizer_signup_creates_organization(self):
         response = self.client.post(reverse('organizer_signup'), {
-            'username': 'omar-organizador',
+            'username': 'Organización SODE',
             'email': 'organizer@example.com',
             'first_name': 'Omar',
             'last_name': 'Organizador',
-            'organization_name': 'Organización SODE',
             'organization_description': 'Eventos comunitarios.',
             'organization_event_type': 'Culturales',
             'password1': 'A-secure-password-123',
@@ -38,7 +38,29 @@ class SignupTests(TestCase):
         self.assertRedirects(response, reverse('signup_success'))
         user = User.objects.get(email='organizer@example.com')
         self.assertEqual(user.role, User.Roles.ORGANIZER)
+        self.assertEqual(user.username, 'Organización SODE')
         self.assertEqual(Organization.objects.get(user=user).name, 'Organización SODE')
+
+    def test_organizer_signup_form_uses_organization_name_label(self):
+        response = self.client.get(reverse('organizer_signup'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Nombre de la organización')
+        self.assertNotContains(response, 'id_organization_name')
+        self.assertContains(response, 'id_username')
+
+    def test_organizer_signup_legacy_payload_compatibility(self):
+        response = self.client.post(reverse('organizer_signup'), {
+            'organization_name': 'Organización Legacy',
+            'organization_event_type': 'Culturales',
+            'email': 'legacy@example.com',
+            'password1': 'A-secure-password-123',
+            'password2': 'A-secure-password-123',
+        })
+
+        self.assertRedirects(response, reverse('signup_success'))
+        user = User.objects.get(email='legacy@example.com')
+        self.assertEqual(user.username, 'Organización Legacy')
+        self.assertEqual(Organization.objects.get(user=user).name, 'Organización Legacy')
 
 
 class UserManagerTests(TestCase):
@@ -83,7 +105,7 @@ class LoginTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             email='login@example.com',
-            username='login@example.com',
+            username='login-username',
             password='A-secure-password-123',
             role=User.Roles.ASSISTANT,
         )
@@ -100,6 +122,36 @@ class LoginTests(TestCase):
         self.assertTrue(response.wsgi_request.user.is_authenticated)
         self.assertContains(response, 'Sesión iniciada correctamente')
         self.assertContains(response, 'login@example.com')
+        self.assertRedirects(response, '/')
+
+    def test_login_with_username_success(self):
+        response = self.client.post('/accounts/login/', {
+            'login': 'login-username',
+            'password': 'A-secure-password-123',
+        }, follow=True)
+
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertContains(response, 'Sesión iniciada correctamente')
+        self.assertContains(response, 'login@example.com')
+        self.assertRedirects(response, '/')
+
+    def test_organizer_login_with_organization_name(self):
+        organizer = User.objects.create_user(
+            email='org_login@example.com',
+            username='Organización Activa',
+            password='A-secure-password-123',
+            role=User.Roles.ORGANIZER,
+        )
+        EmailAddress.objects.create(
+            user=organizer, email=organizer.email, primary=True, verified=True
+        )
+        response = self.client.post('/accounts/login/', {
+            'login': 'Organización Activa',
+            'password': 'A-secure-password-123',
+        }, follow=True)
+
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertContains(response, 'Sesión iniciada correctamente')
         self.assertRedirects(response, '/')
 
     def test_login_uses_custom_spanish_template(self):
@@ -200,13 +252,13 @@ class ProfileTests(TestCase):
     def test_organizer_can_update_organization(self):
         organizer = User.objects.create_user(
             email='org-profile@example.com',
-            username='org-profile@example.com',
+            username='Organización Original',
             password='A-secure-password-123',
             role=User.Roles.ORGANIZER,
         )
         Organization.objects.create(
             user=organizer,
-            name='Organización original',
+            name='Organización Original',
             description='Descripción original',
         )
         EmailAddress.objects.create(
@@ -215,14 +267,14 @@ class ProfileTests(TestCase):
         self.client.force_login(organizer)
 
         response = self.client.post(reverse('profile'), {
-            'username': 'org-profile-user',
+            'username': 'Organización Renovada',
             'first_name': 'Organizador',
             'last_name': 'Actualizado',
             'email': organizer.email,
-            'name': 'Organización renovada',
+            'name': 'Organización Renovada',
             'description': 'Nueva descripción.',
         })
 
         self.assertRedirects(response, reverse('profile'))
         organizer.organization.refresh_from_db()
-        self.assertEqual(organizer.organization.name, 'Organización renovada')
+        self.assertEqual(organizer.organization.name, 'Organización Renovada')

@@ -10,6 +10,10 @@
     <button class="mt-2 rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" type="submit">Crear cuenta</button>
   </form>
   <p class="mt-6 text-slate-400">¿Ya tienes una cuenta? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'account_login' %}">Inicia sesión</a>.</p>
-  <p class="mt-2 text-slate-400">¿Quieres organizar eventos? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'organizer_signup' %}">Crea una cuenta de organizador</a>.</p>
+  {% if request.resolver_match.url_name == 'organizer_signup' %}
+    <p class="mt-2 text-slate-400">¿Quieres asistir a eventos? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'assistant_signup' %}">Crea una cuenta de asistente</a>.</p>
+  {% else %}
+    <p class="mt-2 text-slate-400">¿Quieres organizar eventos? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'organizer_signup' %}">Crea una cuenta de organizador</a>.</p>
+  {% endif %}
 </section>
 {% endblock %}

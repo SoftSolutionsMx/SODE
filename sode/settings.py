@@ -71,7 +71,15 @@ ROOT_URLCONF = 'sode.urls'
 AUTH_USER_MODEL = 'users_app.User'
 SITE_ID = 1
 
-ACCOUNT_LOGIN_METHODS = {'email'}
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
+ACCOUNT_FORMS = {
+    'login': 'users_app.forms.CustomLoginForm',
+}
 SODE_EMAIL_VERIFICATION = os.getenv('SODE_EMAIL_VERIFICATION', '').lower() in {
     '1', 'true', 'yes', 'on'
 }

@@ -9,6 +9,7 @@ from email_service.services import send_verification_email
 
 from .forms import (
     AssistantSignupForm,
+    CustomLoginForm,
     OrganizationProfileForm,
     OrganizerSignupForm,
     ProfileForm,
@@ -21,6 +22,7 @@ def home(request):
 
 
 class SiteLoginView(LoginView):
+    form_class = CustomLoginForm
     template_name = 'users_app/login.html'
 
     def form_valid(self, form):
@@ -52,9 +54,9 @@ def organizer_signup(request):
             user = form.save()
             Organization.objects.create(
                 user=user,
-                name=form.cleaned_data['organization_name'],
-                description=form.cleaned_data['organization_description'],
-                event_type=form.cleaned_data['organization_event_type'],
+                name=user.username,
+                description=form.cleaned_data.get('organization_description', ''),
+                event_type=form.cleaned_data.get('organization_event_type', ''),
             )
             send_verification_email(request, user, signup=True)
             return redirect('signup_success')
@@ -83,7 +85,13 @@ def profile(request):
             email_changed = previous_email.lower() != user.email.lower()
             send_verification_email(request, user, signup=False, replace_existing=email_changed)
             if organization_form:
-                organization_form.save()
+                organization = organization_form.save(commit=False)
+                org_name = organization_form.cleaned_data.get('name') or user.username
+                organization.name = org_name
+                organization.save()
+                if user.username != org_name:
+                    user.username = org_name
+                    user.save(update_fields=['username'])
             messages.success(request, 'Tu perfil se actualizó correctamente.')
             return redirect('profile')
     else:
