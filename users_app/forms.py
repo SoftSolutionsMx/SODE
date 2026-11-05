@@ -5,6 +5,52 @@ from allauth.account.forms import LoginForm
 from .models import Interest
 
 
+class TagsWidget(forms.HiddenInput):
+    """Campo de etiquetas libres: el valor viaja como texto separado por comas."""
+    template_name = 'users_app/widgets/tags.html'
+
+    def __init__(self, attrs=None, placeholder=''):
+        super().__init__(attrs)
+        self.placeholder = placeholder
+
+    def get_context(self, name, value, attrs):
+        if isinstance(value, (list, tuple)):
+            value = ', '.join(value)
+        context = super().get_context(name, value, attrs)
+        context['widget']['placeholder'] = self.placeholder
+        return context
+
+
+class TagsField(forms.Field):
+    """Lista de etiquetas sin vacías ni duplicadas (sin distinguir mayúsculas), con espacios recortados."""
+    widget = TagsWidget
+    max_tag_length = 100
+
+    def to_python(self, value):
+        parts = value if isinstance(value, (list, tuple)) else (value or '').split(',')
+        tags, seen = [], set()
+        for part in parts:
+            tag = ' '.join(str(part).split())
+            if tag and tag.casefold() not in seen:
+                seen.add(tag.casefold())
+                tags.append(tag)
+        return tags
+
+    def validate(self, value):
+        super().validate(value)
+        if any(len(tag) > self.max_tag_length for tag in value):
+            raise forms.ValidationError(f'Cada etiqueta admite hasta {self.max_tag_length} caracteres.')
+
+
+def set_user_interests(user, names):
+    """Reemplaza los intereses del usuario, reutilizando los existentes sin distinguir mayúsculas."""
+    interests = [
+        Interest.objects.filter(name__iexact=name).first() or Interest.objects.create(name=name)
+        for name in names
+    ]
+    user.interests.set(interests)
+
+
 FORM_INPUT_CLASSES = (
     'w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 '
     'text-sm text-white placeholder-slate-500 focus:border-indigo-500 '
@@ -14,7 +60,7 @@ FORM_INPUT_CLASSES = (
 
 def _style_form_fields(form):
     for name, field in form.fields.items():
-        if isinstance(field.widget, forms.CheckboxSelectMultiple):
+        if isinstance(field.widget, (forms.CheckboxSelectMultiple, TagsWidget)):
             continue
         if isinstance(field.widget, (forms.FileInput, forms.ClearableFileInput)):
             field.widget.attrs['class'] = (
@@ -145,29 +191,26 @@ class BaseSignupForm(forms.ModelForm):
 
 
 class AssistantSignupForm(BaseSignupForm):
-    interests = forms.ModelMultipleChoiceField(
-        queryset=Interest.objects.all(),
+    interests = TagsField(
+        label='Intereses',
         required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label='Intereses temáticos',
+        widget=TagsWidget(placeholder='Ej. Inteligencia artificial, Jazz en vivo...'),
     )
-
-    class Meta(BaseSignupForm.Meta):
-        fields = ('username', 'email', 'first_name', 'last_name', 'interests')
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = get_user_model().Roles.ASSISTANT
         if commit:
             user.save()
-            if 'interests' in self.cleaned_data and self.cleaned_data['interests']:
-                user.interests.set(self.cleaned_data['interests'])
+            set_user_interests(user, self.cleaned_data['interests'])
         return user
 
 
 class OrganizerSignupForm(BaseSignupForm):
-    organization_event_type = forms.CharField(
-        label='Tipología de eventos', min_length=1, max_length=200, required=False
+    organization_event_type = TagsField(
+        label='Especialidades',
+        required=False,
+        widget=TagsWidget(placeholder='Ej. Conferencias de tecnología, Ferias gastronómicas...'),
     )
     organization_description = forms.CharField(
         label='Descripción de la organización', widget=forms.Textarea, required=False
@@ -179,8 +222,6 @@ class OrganizerSignupForm(BaseSignupForm):
         self.fields['username'].label = 'Nombre de la organización'
         self.fields['username'].help_text = 'Este nombre identificará a tu organización y servirá para iniciar sesión.'
         self.fields['username'].widget.attrs['placeholder'] = 'Nombre de la organización'
-        if 'organization_event_type' in self.fields:
-            self.fields['organization_event_type'].widget.attrs['placeholder'] = 'Ej. Tecnología, Académicos, Culturales...'
         if 'organization_description' in self.fields:
             self.fields['organization_description'].widget.attrs['placeholder'] = 'Describe brevemente las actividades que realiza la organización...'
         _style_form_fields(self)
@@ -200,19 +241,21 @@ class OrganizerSignupForm(BaseSignupForm):
 
 
 class ProfileForm(forms.ModelForm):
+    interests = TagsField(
+        label='Intereses',
+        required=False,
+        widget=TagsWidget(placeholder='Ej. Inteligencia artificial, Jazz en vivo...'),
+    )
+
     class Meta:
         model = get_user_model()
-        fields = ('username', 'first_name', 'last_name', 'email', 'location', 'interests')
+        fields = ('username', 'first_name', 'last_name', 'email', 'location')
         labels = {
             'first_name': 'Nombre',
             'last_name': 'Apellidos',
             'email': 'Correo electrónico',
             'username': 'Nombre de usuario',
             'location': 'Ubicación',
-            'interests': 'Intereses',
-        }
-        widgets = {
-            'interests': forms.CheckboxSelectMultiple,
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -220,6 +263,9 @@ class ProfileForm(forms.ModelForm):
         self.user = user or self.instance
         if self.user and getattr(self.user, 'role', None) == get_user_model().Roles.ORGANIZER:
             self.fields['username'].label = 'Nombre de la organización'
+            del self.fields['interests']  # los organizadores usan «Especialidades» en su organización
+        elif self.instance.pk:
+            self.initial['interests'] = list(self.instance.interests.values_list('name', flat=True))
         _style_form_fields(self)
         if 'first_name' in self.fields:
             self.fields['first_name'].widget.attrs.setdefault('placeholder', 'Tu nombre')
@@ -246,9 +292,20 @@ class ProfileForm(forms.ModelForm):
             raise forms.ValidationError('Ya existe una cuenta con este nombre de usuario.')
         return username
 
+    def save(self, commit=True):
+        user = super().save(commit)
+        if commit and 'interests' in self.fields:
+            set_user_interests(user, self.cleaned_data['interests'])
+        return user
+
 
 class OrganizationProfileForm(forms.ModelForm):
     name = forms.CharField(label='Nombre de la organización', min_length=1, max_length=200, required=False)
+    event_type = TagsField(
+        label='Especialidades',
+        required=False,
+        widget=TagsWidget(placeholder='Ej. Conferencias de tecnología, Ferias gastronómicas...'),
+    )
 
     class Meta:
         model = get_user_model().organization.field.related_model
@@ -256,7 +313,6 @@ class OrganizationProfileForm(forms.ModelForm):
         labels = {
             'name': 'Nombre de la organización',
             'description': 'Descripción',
-            'event_type': 'Tipología de eventos',
             'logo': 'Logo institucional',
         }
 
@@ -265,7 +321,8 @@ class OrganizationProfileForm(forms.ModelForm):
         _style_form_fields(self)
         if 'name' in self.fields:
             self.fields['name'].widget.attrs.setdefault('placeholder', 'Nombre de la organización')
-        if 'event_type' in self.fields:
-            self.fields['event_type'].widget.attrs.setdefault('placeholder', 'Ej. Tecnología, Cultura, Deportes...')
         if 'description' in self.fields:
             self.fields['description'].widget.attrs.setdefault('placeholder', 'Descripción de la organización...')
+
+    def clean_event_type(self):
+        return ', '.join(self.cleaned_data['event_type'])

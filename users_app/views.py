@@ -135,7 +135,7 @@ def organizer_signup(request):
                 user=user,
                 name=user.username,
                 description=form.cleaned_data.get('organization_description', ''),
-                event_type=form.cleaned_data.get('organization_event_type', '') or 'General',
+                event_type=', '.join(form.cleaned_data['organization_event_type']),
             )
         send_verification_email(request, user, signup=True)
         messages.info(

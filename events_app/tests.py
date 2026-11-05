@@ -47,7 +47,7 @@ class EventsAcceptanceAndIntegrationTests(TestCase):
         mail.outbox.clear()
 
         self.client = Client()
-        self.interest_tech = Interest.objects.create(name='Tecnología')
+        self.interest_tech = Interest.objects.create(name='Inteligencia artificial')
 
         # Organizador verificado
         self.organizador = User.objects.create_user(
@@ -66,7 +66,7 @@ class EventsAcceptanceAndIntegrationTests(TestCase):
             user=self.organizador,
             name='Organización A',
             description='Organización especializada en tecnología.',
-            event_type='Académicos',
+            event_type='Congresos académicos, Ferias de ciencia',
         )
 
         # Asistente verificado

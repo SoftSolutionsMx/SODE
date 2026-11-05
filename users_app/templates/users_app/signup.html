@@ -22,7 +22,7 @@
 
     <div class="grid gap-5 sm:grid-cols-2">
       {% for field in form %}
-        <div class="{% if field.name == 'interests' or field.name == 'organization_description' or field.name == 'username' or field.name == 'email' %}sm:col-span-2{% endif %} space-y-1.5">
+        <div class="{% if field.name == 'interests' or field.name == 'organization_description' or field.name == 'organization_event_type' or field.name == 'username' or field.name == 'email' %}sm:col-span-2{% endif %} space-y-1.5">
           <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-200">
             {{ field.label }} {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
           </label>

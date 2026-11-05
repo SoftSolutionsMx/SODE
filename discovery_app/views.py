@@ -118,7 +118,7 @@ def discovery_view(request):
     )
 
     enriched_evaluations = [prepare_event_display_data(item) for item in ranked_evaluations]
-    available_interests = Interest.objects.all().order_by('name')
+    available_interests = Interest.objects.filter(eventos__isnull=False).distinct().order_by('name')
 
     context = {
         'evaluations': enriched_evaluations,

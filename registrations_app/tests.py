@@ -43,7 +43,7 @@ class RegistrationsAcceptanceAndIntegrationTests(TestCase):
             user=self.organizador,
             name='Organización A',
             description='Organización de eventos tecnológicos.',
-            event_type='Tecnología',
+            event_type='Conferencias de tecnología, Hackathons',
         )
 
         # Asistentes verificados

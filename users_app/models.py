@@ -42,7 +42,7 @@ class Organization(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='organization')
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    event_type = models.CharField(max_length=200, blank=True)
+    event_type = models.TextField(blank=True)  # especialidades separadas por coma
     logo = models.ImageField(upload_to='organization_logos/', blank=True)
 
     @property

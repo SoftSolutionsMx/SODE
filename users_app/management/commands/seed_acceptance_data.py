@@ -84,10 +84,10 @@ class Command(BaseCommand):
         default_password = 'Password123!'
 
         with transaction.atomic():
-            # 1. Crear Intereses Temáticos
-            int_tech, _ = Interest.objects.get_or_create(name='Tecnología')
-            int_salud, _ = Interest.objects.get_or_create(name='Salud')
-            int_negocios, _ = Interest.objects.get_or_create(name='Negocios')
+            # 1. Crear intereses libres (etiquetas multipalabra, como las escribiría un usuario)
+            int_tech, _ = Interest.objects.get_or_create(name='Inteligencia artificial')
+            int_salud, _ = Interest.objects.get_or_create(name='Salud mental')
+            int_negocios, _ = Interest.objects.get_or_create(name='Emprendimiento y startups')
 
             # 2. Parámetros de Recomendación por defecto
             for name, weight in RecommendationParameter.DEFAULT_WEIGHTS.items():
@@ -109,7 +109,7 @@ class Command(BaseCommand):
                 defaults={
                     'name': 'Organización A',
                     'description': 'Organización líder en conferencias tecnológicas, talleres de programación y arquitectura de software.',
-                    'event_type': 'Tecnología y Académicos',
+                    'event_type': 'Conferencias de tecnología, Talleres de programación, Congresos académicos',
                 },
             )
 

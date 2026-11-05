@@ -105,32 +105,6 @@
       color: #94a3b8;
       margin-top: 0.25rem;
     }
-    div[id^="id_interests"] {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 0.625rem;
-      padding: 0.875rem;
-      background-color: #020617;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      max-height: 14rem;
-      overflow-y: auto;
-    }
-    div[id^="id_interests"] > div {
-      display: flex;
-      align-items: center;
-    }
-    div[id^="id_interests"] label {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #cbd5e1;
-      cursor: pointer;
-      margin-bottom: 0;
-      user-select: none;
-    }
   </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -213,5 +187,48 @@
       <span>Plataforma Académica, Cultural y Recreativa</span>
     </div>
   </footer>
+<script>
+/* Campo de etiquetas: Enter o «Añadir» crea una etiqueta; el valor viaja en un input oculto separado por comas. */
+document.querySelectorAll('[data-tags]').forEach(function (box) {
+  var hidden = box.querySelector('[data-tags-value]');
+  var input = box.querySelector('[data-tags-input]');
+  var list = box.querySelector('[data-tags-list]');
+  var empty = box.querySelector('[data-tags-empty]');
+  var tags = [];
+
+  function add(raw) {
+    raw.split(',').forEach(function (part) {
+      var tag = part.trim().replace(/\s+/g, ' ');
+      if (tag && !tags.some(function (t) { return t.toLowerCase() === tag.toLowerCase(); })) tags.push(tag);
+    });
+    render();
+  }
+  function render() {
+    hidden.value = tags.join(', ');
+    empty.hidden = tags.length > 0;
+    list.replaceChildren.apply(list, tags.map(function (tag, i) {
+      var li = document.createElement('li');
+      li.className = 'inline-flex items-center gap-1 rounded-lg border border-indigo-500/40 bg-indigo-500/15 py-1 pl-2.5 pr-1 text-sm font-medium text-indigo-100';
+      li.append(tag);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '\u00d7';
+      btn.setAttribute('aria-label', 'Quitar ' + tag);
+      btn.className = 'flex h-5 w-5 items-center justify-center rounded text-base leading-none text-indigo-300 hover:bg-rose-500/30 hover:text-white focus:outline-none focus:ring-2 focus:ring-rose-400';
+      btn.addEventListener('click', function () { tags.splice(i, 1); render(); input.focus(); });
+      li.append(btn);
+      return li;
+    }));
+  }
+  function commit() { if (input.value.trim()) add(input.value); input.value = ''; }
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+  });
+  box.querySelector('[data-tags-add]').addEventListener('click', function () { commit(); input.focus(); });
+  if (input.form) input.form.addEventListener('submit', commit); // no perder texto escrito sin confirmar
+  add(hidden.value);
+});
+</script>
 </body>
 </html>

@@ -41,7 +41,7 @@ class SignupTests(TestCase):
             'first_name': 'Omar',
             'last_name': 'Organizador',
             'organization_description': 'Eventos comunitarios.',
-            'organization_event_type': 'Culturales',
+            'organization_event_type': 'Festivales culturales, Teatro  comunitario ,festivales CULTURALES',
             'password1': 'A-secure-password-123',
             'password2': 'A-secure-password-123',
         })
@@ -51,6 +51,11 @@ class SignupTests(TestCase):
         self.assertEqual(user.role, User.Roles.ORGANIZER)
         self.assertEqual(user.username, 'Organización SODE')
         self.assertEqual(Organization.objects.get(user=user).name, 'Organización SODE')
+        # Etiquetas recortadas, sin espacios dobles y sin duplicados (ignora mayúsculas)
+        self.assertEqual(
+            Organization.objects.get(user=user).event_type,
+            'Festivales culturales, Teatro comunitario',
+        )
         # El organizador NO debe estar verificado automáticamente
         email_record = EmailAddress.objects.get(user=user)
         self.assertFalse(email_record.verified)
@@ -280,31 +285,42 @@ class ProfileTests(TestCase):
             password='A-secure-password-123',
             role=User.Roles.ASSISTANT,
         )
-        self.user.interests.create(name='Música')
+        self.user.interests.create(name='Música electrónica')
         EmailAddress.objects.create(
             user=self.user, email=self.user.email, primary=True, verified=True
         )
         self.client.force_login(self.user)
 
     def test_assistant_can_update_profile_and_interests(self):
-        interest = self.user.interests.first()
         response = self.client.post(reverse('profile'), {
             'username': 'profile-user',
             'first_name': 'Nuevo',
             'last_name': 'Nombre',
             'email': 'new-profile@example.com',
             'location': 'Ciudad de México',
-            'interests': [interest.pk],
+            'interests': '  Jazz en vivo , jazz EN vivo,, Inteligencia  artificial ',
         })
 
         self.assertRedirects(response, reverse('profile'))
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, 'new-profile@example.com')
         self.assertEqual(self.user.first_name, 'Nuevo')
-        self.assertEqual(list(self.user.interests.values_list('pk', flat=True)), [interest.pk])
+        self.assertCountEqual(
+            self.user.interests.values_list('name', flat=True),
+            ['Jazz en vivo', 'Inteligencia artificial'],
+        )
         # Al cambiar correo con verificación activada, el nuevo correo NO está verificado aún
         new_address = EmailAddress.objects.get(user=self.user, email='new-profile@example.com')
         self.assertFalse(new_address.verified)
+
+    def test_profile_shows_saved_interests_and_removes_deleted_ones(self):
+        response = self.client.get(reverse('profile'))
+        self.assertContains(response, 'value="Música electrónica"')
+
+        self.client.post(reverse('profile'), {
+            'username': 'profile@example.com', 'email': 'profile@example.com', 'interests': '',
+        })
+        self.assertFalse(self.user.interests.exists())
 
     def test_organizer_can_update_organization(self):
         organizer = User.objects.create_user(
@@ -330,11 +346,15 @@ class ProfileTests(TestCase):
             'email': organizer.email,
             'name': 'Organización Renovada',
             'description': 'Nueva descripción.',
+            'event_type': 'Ferias gastronómicas,  Conciertos al aire libre , ferias GASTRONÓMICAS',
         })
 
         self.assertRedirects(response, reverse('profile'))
         organizer.organization.refresh_from_db()
         self.assertEqual(organizer.organization.name, 'Organización Renovada')
+        self.assertEqual(organizer.organization.event_type, 'Ferias gastronómicas, Conciertos al aire libre')
+        self.assertContains(self.client.get(reverse('profile')), 'Especialidades')
+        self.assertContains(self.client.get(reverse('profile')), 'value="Ferias gastronómicas, Conciertos al aire libre"')
 
 
 @override_settings(
