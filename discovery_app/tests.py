@@ -77,9 +77,9 @@ class RecommendationEngineCoreTest(TestCase):
     """Pruebas unitarias de las funciones matemáticas y heurísticas del motor (RF 5.1, 5.2, 5.3)."""
 
     def setUp(self):
-        self.interest_tech = Interest.objects.create(name='Tecnología')
-        self.interest_health = Interest.objects.create(name='Salud')
-        self.interest_art = Interest.objects.create(name='Arte')
+        self.interest_tech = Interest.objects.create(name='Inteligencia artificial')
+        self.interest_health = Interest.objects.create(name='Salud mental')
+        self.interest_art = Interest.objects.create(name='Arte contemporáneo')
 
         self.user = User.objects.create_user(
             email='asistente_test@example.com',
@@ -113,7 +113,7 @@ class RecommendationEngineCoreTest(TestCase):
         eval_nomatch = RecommendationEngine.evaluate_event(event_nomatch, user=self.user)
 
         self.assertGreater(eval_match['scores']['interests'], eval_nomatch['scores']['interests'])
-        self.assertIn('Tecnología', eval_match['matched_interests'])
+        self.assertIn('Inteligencia artificial', eval_match['matched_interests'])
 
     def test_proximity_matching_rf_5_1(self):
         event_local = MockEvent(location='Mérida, Yucatán')
@@ -176,9 +176,9 @@ class IntegrationTestCaseCPINT06(TestCase):
     def setUp(self):
         self.client = Client()
 
-        self.interest_tech = Interest.objects.create(name='Tecnología')
-        self.interest_health = Interest.objects.create(name='Salud')
-        self.interest_art = Interest.objects.create(name='Arte')
+        self.interest_tech = Interest.objects.create(name='Inteligencia artificial')
+        self.interest_health = Interest.objects.create(name='Salud mental')
+        self.interest_art = Interest.objects.create(name='Arte contemporáneo')
 
         self.assistant = User.objects.create_user(
             email='asistente_cpint06@gmail.com',

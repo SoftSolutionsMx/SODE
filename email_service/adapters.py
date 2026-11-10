@@ -13,5 +13,6 @@ class EmailServiceAccountAdapter(DefaultAccountAdapter):
     def send_mail(self, template_prefix, email, context):
         logger.info(f"Enviando correo allauth con plantilla '{template_prefix}' a '{email}'.")
         msg = self.render_mail(template_prefix, email, context)
+        if 'email_confirmation' in str(template_prefix):
+            msg.subject = 'Activa tu cuenta en SODE'
         return msg.send()
-

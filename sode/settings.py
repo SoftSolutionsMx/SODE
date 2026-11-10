@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-kv$de34nrl%6mjy!2w&b-nb)v5jzqt_(+97k#)%^i+j6o$w0m+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -47,13 +47,20 @@ INSTALLED_APPS = [
     'allauth.account',
     'email_service',
     'users_app',
+    'events_app',
+    'registrations_app',
+    'social_app',
     'discovery_app',
     'django_tailwind_cli',
 ]
 
+os.makedirs(BASE_DIR / "assets", exist_ok=True)
 STATICFILES_DIRS = [BASE_DIR / "assets"]
 TAILWIND_CLI_SRC_CSS = BASE_DIR / "tailwind" / "input.css"
 TAILWIND_CLI_DIST_CSS = "css/tailwind.css"
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -80,8 +87,11 @@ SODE_EMAIL_VERIFICATION = os.getenv('SODE_EMAIL_VERIFICATION', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory' if SODE_EMAIL_VERIFICATION else 'none'
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email*', 'password1*']
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
 LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 SESSION_COOKIE_AGE = 30 * 24 * 60 * 60
 SESSION_SAVE_EVERY_REQUEST = True
 

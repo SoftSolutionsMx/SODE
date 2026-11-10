@@ -1,0 +1,115 @@
+{% extends "users_app/base.html" %}
+{% block title %}Asistentes: {{ evento.titulo }} | SODE{% endblock %}
+{% block content %}
+<section class="mt-8">
+  <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-8">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">Control de Aforo y Lista de Espera</p>
+      <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold text-white">{{ evento.titulo }}</h1>
+      <p class="mt-1 text-sm text-slate-400">
+        Capacidad máxima: <strong>{{ evento.capacidad_maxima }}</strong> •
+        Confirmados: <strong class="text-emerald-400">{{ confirmados_count }}</strong> •
+        En Lista de Espera: <strong class="text-amber-400">{{ lista_espera_count }}</strong>
+      </p>
+    </div>
+    <div class="flex gap-3">
+      <a href="{% url 'my_events' %}" class="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+        ← Mis Eventos
+      </a>
+      <a href="{% url 'event_detail' evento.id %}" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500">
+        Ver Evento
+      </a>
+    </div>
+  </div>
+
+  <!-- Pestañas de Navegación (Confirmados / Lista de Espera) -->
+  <div class="mt-6 flex flex-wrap gap-2 border-b border-slate-800 pb-3">
+    <a href="?tab=all" class="rounded-xl px-4 py-2 text-xs font-bold transition {% if active_tab == 'all' %}bg-indigo-600 text-white{% else %}bg-slate-900 text-slate-300 hover:bg-slate-800{% endif %}">
+      Todos ({{ inscripciones|length }})
+    </a>
+    <a href="?tab=confirmed" class="rounded-xl px-4 py-2 text-xs font-bold transition {% if active_tab == 'confirmed' %}bg-emerald-600 text-white{% else %}bg-slate-900 text-emerald-300 hover:bg-slate-800{% endif %}">
+      Confirmados ({{ confirmados_count }})
+    </a>
+    <a href="?tab=waitlist" class="rounded-xl px-4 py-2 text-xs font-bold transition {% if active_tab == 'waitlist' %}bg-amber-600 text-white{% else %}bg-slate-900 text-amber-300 hover:bg-slate-800{% endif %}">
+      Lista de Espera ({{ lista_espera_count }})
+    </a>
+  </div>
+
+  <!-- Tabla de Asistentes y Lista de Espera -->
+  <div class="mt-6 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900">
+    <table class="w-full text-left text-sm text-slate-300">
+      <thead class="border-b border-slate-800 bg-slate-950/80 text-xs uppercase text-slate-400">
+        <tr>
+          <th class="px-5 py-3.5">Asistente</th>
+          <th class="px-5 py-3.5">Correo</th>
+          <th class="px-5 py-3.5">Respuestas del Cuestionario</th>
+          <th class="px-5 py-3.5">Fecha Registro</th>
+          <th class="px-5 py-3.5">Estado</th>
+          <th class="px-5 py-3.5 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800">
+        {% for insc in inscripciones %}
+          <tr class="hover:bg-slate-800/40" data-username="{{ insc.asistente.username }}" data-status="{{ insc.estado }}">
+            <td class="px-5 py-4 font-semibold text-white">{{ insc.asistente.username }}</td>
+            <td class="px-5 py-4 text-slate-400">{{ insc.asistente.email }}</td>
+            <td class="px-5 py-4 text-xs">
+              {% if insc.respuestas.all %}
+                <ul class="space-y-1">
+                  {% for r in insc.respuestas.all %}
+                    <li><strong class="text-slate-300">{{ r.pregunta.texto }}:</strong> {{ r.valor }}</li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span class="text-slate-500">Sin respuestas adicionales</span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-4 text-xs text-slate-400">{{ insc.fecha_registro|date:"d M Y, H:i" }}</td>
+            <td class="px-5 py-4">
+              {% if insc.estado == 'Confirmado' %}
+                <span class="rounded-full border border-emerald-600 bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-300">
+                  Confirmado
+                </span>
+              {% elif insc.estado == 'Lista de Espera' %}
+                <span class="rounded-full border border-amber-600 bg-amber-950 px-3 py-1 text-xs font-bold text-amber-300">
+                  Lista de Espera
+                </span>
+              {% else %}
+                <span class="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-slate-400">
+                  Cancelado
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-5 py-4 text-right">
+              <div class="inline-flex items-center gap-2">
+                {% if insc.estado == 'Lista de Espera' %}
+                  <form method="post" action="{% url 'admit_attendee' evento.id insc.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 transition">
+                      Admitir
+                    </button>
+                  </form>
+                {% endif %}
+                {% if insc.estado != 'Cancelado' %}
+                  <form method="post" action="{% url 'reject_attendee' evento.id insc.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-lg border border-rose-700/60 bg-rose-950/50 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-900">
+                      Depurar
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-6 py-10 text-center text-slate-400">
+              No hay solicitudes registradas para este evento todavía.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

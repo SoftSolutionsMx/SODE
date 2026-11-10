@@ -1,19 +1,108 @@
 {% extends "users_app/base.html" %}
 {% block title %}Iniciar sesión | SODE{% endblock %}
 {% block content %}
-<section class="mx-auto my-8 max-w-lg rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-10">
-  <p class="text-sm font-semibold uppercase tracking-widest text-indigo-300">Bienvenido de nuevo</p>
-  <h1 class="mt-2 text-3xl font-bold text-white">Iniciar sesión</h1>
-  <form class="mt-8" method="post" novalidate>
+<section class="mx-auto my-10 max-w-lg rounded-2xl border border-slate-800 bg-slate-900/95 p-6 sm:p-10 shadow-2xl backdrop-blur">
+  <div class="border-b border-slate-800 pb-5">
+    <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">Bienvenido de nuevo</p>
+    <h1 class="mt-1 text-3xl font-extrabold text-white">Iniciar sesión</h1>
+    <p class="mt-1.5 text-sm text-slate-400">Ingresa tus credenciales para acceder a tu cuenta en SODE.</p>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="mt-6 rounded-xl border border-rose-700 bg-rose-950/60 p-4 text-sm text-rose-200">
+      {% for error in form.non_field_errors %}
+        <p class="font-medium">{{ error }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form class="mt-6 space-y-5" method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button class="mt-2 rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" type="submit">Iniciar sesión</button>
+
+    <div class="space-y-1.5">
+      <label for="id_login" class="block text-sm font-semibold text-slate-200">
+        Usuario o correo electrónico
+      </label>
+      <input
+        type="text"
+        name="login"
+        id="id_login"
+        autocomplete="username"
+        required
+        value="{{ form.login.value|default:'' }}"
+        placeholder="ejemplo@correo.com o tu usuario"
+        class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition"
+      >
+      {% if form.login.errors %}
+        <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+          {% for error in form.login.errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="id_password" class="block text-sm font-semibold text-slate-200">
+        Contraseña
+      </label>
+      <input
+        type="password"
+        name="password"
+        id="id_password"
+        autocomplete="current-password"
+        required
+        placeholder="Tu contraseña"
+        class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition"
+      >
+      {% if form.password.errors %}
+        <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+          {% for error in form.password.errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if form.remember %}
+      <div class="flex items-center gap-2 pt-1">
+        {{ form.remember }}
+        <label for="{{ form.remember.id_for_label }}" class="text-xs text-slate-300 cursor-pointer mb-0">Recordarme</label>
+      </div>
+    {% endif %}
+
+    {% for field in form %}
+      {% if field.name != 'login' and field.name != 'password' and field.name != 'remember' %}
+        <div class="space-y-1.5">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-200">
+            {{ field.label }}
+          </label>
+          {{ field }}
+          {% if field.errors %}
+            <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+              {% for error in field.errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <div class="pt-2">
+      <button class="w-full rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition" type="submit">
+        Iniciar sesión
+      </button>
+    </div>
   </form>
-  <p class="mt-6 text-slate-400">
-    ¿Aún no tienes cuenta?
-    <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'assistant_signup' %}">Regístrate como asistente</a>
-    o
-    <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'organizer_signup' %}">como organizador</a>.
-  </p>
+
+  <div class="mt-8 border-t border-slate-800 pt-6 text-center text-sm text-slate-400">
+    <p>¿Aún no tienes cuenta?</p>
+    <div class="mt-2 flex flex-col sm:flex-row items-center justify-center gap-2 text-sm font-medium">
+      <a class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4" href="{% url 'assistant_signup' %}">Regístrate como asistente</a>
+      <span class="text-slate-600 hidden sm:inline">•</span>
+      <a class="text-indigo-400 hover:text-indigo-300 underline underline-offset-4" href="{% url 'organizer_signup' %}">como organizador</a>
+    </div>
+  </div>
 </section>
 {% endblock %}

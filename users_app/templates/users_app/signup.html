@@ -1,19 +1,60 @@
 {% extends "users_app/base.html" %}
 {% block title %}{{ title }} | SODE{% endblock %}
 {% block content %}
-<section class="mx-auto my-8 max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-10">
-  <p class="text-sm font-semibold uppercase tracking-widest text-indigo-300">Únete a SODE</p>
-  <h1 class="mt-2 text-3xl font-bold text-white">{{ title }}</h1>
-  <p class="mt-2 text-slate-400">Completa tus datos para comenzar.</p>
-  <form class="mt-8" method="post" novalidate>
-    {% csrf_token %}{{ form.as_p }}
-    <button class="mt-2 rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" type="submit">Crear cuenta</button>
-  </form>
-  <p class="mt-6 text-slate-400">¿Ya tienes una cuenta? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'account_login' %}">Inicia sesión</a>.</p>
-  {% if request.resolver_match.url_name == 'organizer_signup' %}
-    <p class="mt-2 text-slate-400">¿Quieres asistir a eventos? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'assistant_signup' %}">Crea una cuenta de asistente</a>.</p>
-  {% else %}
-    <p class="mt-2 text-slate-400">¿Quieres organizar eventos? <a class="text-indigo-300 hover:text-indigo-200" href="{% url 'organizer_signup' %}">Crea una cuenta de organizador</a>.</p>
+<section class="mx-auto my-8 max-w-2xl rounded-2xl border border-slate-800 bg-slate-900/95 p-6 sm:p-10 shadow-2xl backdrop-blur">
+  <div class="border-b border-slate-800 pb-5">
+    <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">Únete a SODE</p>
+    <h1 class="mt-1 text-3xl font-extrabold text-white">{{ title }}</h1>
+    <p class="mt-1.5 text-sm text-slate-400">Completa tus datos para comenzar a participar en la plataforma.</p>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="mt-6 rounded-xl border border-rose-700 bg-rose-950/60 p-4 text-sm text-rose-200">
+      <p class="font-bold mb-1">Por favor corrige los siguientes errores:</p>
+      {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
   {% endif %}
+
+  <form class="mt-6 space-y-6" method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="grid gap-5 sm:grid-cols-2">
+      {% for field in form %}
+        <div class="{% if field.name == 'interests' or field.name == 'organization_description' or field.name == 'organization_event_type' or field.name == 'username' or field.name == 'email' %}sm:col-span-2{% endif %} space-y-1.5">
+          <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-200">
+            {{ field.label }} {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+            <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
+          {% endif %}
+          {% if field.errors %}
+            <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+              {% for error in field.errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="pt-3">
+      <button class="w-full sm:w-auto rounded-xl bg-indigo-600 px-8 py-3 font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition" type="submit">
+        Crear cuenta
+      </button>
+    </div>
+  </form>
+
+  <div class="mt-8 border-t border-slate-800 pt-6 space-y-2 text-sm text-slate-400">
+    <p>¿Ya tienes una cuenta? <a class="text-indigo-400 hover:text-indigo-300 font-medium underline underline-offset-4" href="{% url 'account_login' %}">Inicia sesión</a>.</p>
+    {% if request.resolver_match.url_name == 'organizer_signup' %}
+      <p>¿Quieres asistir a eventos? <a class="text-indigo-400 hover:text-indigo-300 font-medium underline underline-offset-4" href="{% url 'assistant_signup' %}">Crea una cuenta de asistente</a>.</p>
+    {% else %}
+      <p>¿Quieres organizar eventos? <a class="text-indigo-400 hover:text-indigo-300 font-medium underline underline-offset-4" href="{% url 'organizer_signup' %}">Crea una cuenta de organizador</a>.</p>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

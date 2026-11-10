@@ -1,17 +1,91 @@
 {% extends "users_app/base.html" %}
 {% block title %}Mi perfil | SODE{% endblock %}
 {% block content %}
-<section class="mx-auto my-8 max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 sm:p-10">
-  <p class="text-sm font-semibold uppercase tracking-widest text-indigo-300">Cuenta de {{ user.get_role_display }}</p>
-  <h1 class="mt-2 text-3xl font-bold text-white">Mi perfil</h1>
-  <p class="mt-2 text-slate-400">Actualiza la información que compartes en SODE.</p>
-  <form class="mt-8" method="post" novalidate>
-    {% csrf_token %}{{ user_form.as_p }}
+<section class="mx-auto my-8 max-w-3xl rounded-2xl border border-slate-800 bg-slate-900/95 p-6 sm:p-10 shadow-2xl backdrop-blur">
+  <div class="border-b border-slate-800 pb-5">
+    <p class="text-xs font-semibold uppercase tracking-widest text-indigo-400">Cuenta de {{ user.get_role_display }}</p>
+    <h1 class="mt-1 text-3xl font-extrabold text-white">Mi perfil</h1>
+    <p class="mt-1.5 text-sm text-slate-400">Actualiza la información que compartes en SODE.</p>
+  </div>
+
+  {% if user_form.non_field_errors or organization_form.non_field_errors %}
+    <div class="mt-6 rounded-xl border border-rose-700 bg-rose-950/60 p-4 text-sm text-rose-200">
+      <p class="font-bold mb-1">Por favor verifica los siguientes errores:</p>
+      {% for error in user_form.non_field_errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+      {% if organization_form %}
+        {% for error in organization_form.non_field_errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <form class="mt-6 space-y-8" method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div>
+      <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+        Datos de Usuario
+      </h2>
+      <div class="grid gap-5 sm:grid-cols-2">
+        {% for field in user_form %}
+          <div class="{% if field.name == 'interests' or field.name == 'username' or field.name == 'email' %}sm:col-span-2{% endif %} space-y-1.5">
+            <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-200">
+              {{ field.label }} {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+            {% if field.errors %}
+              <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+                {% for error in field.errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
     {% if organization_form %}
-      <h2 class="mt-8 mb-4 text-xl font-bold text-white">Organización</h2>
-      {{ organization_form.as_p }}
+      <div class="border-t border-slate-800 pt-6">
+        <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+          Datos de la Organización
+        </h2>
+        <div class="grid gap-5 sm:grid-cols-2">
+          {% for field in organization_form %}
+            <div class="{% if field.name == 'description' or field.name == 'logo' or field.name == 'name' or field.name == 'event_type' %}sm:col-span-2{% endif %} space-y-1.5">
+              <label for="{{ field.id_for_label }}" class="block text-sm font-semibold text-slate-200">
+                {{ field.label }} {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+              </label>
+              {{ field }}
+              {% if field.help_text %}
+                <p class="text-xs text-slate-400 mt-1">{{ field.help_text }}</p>
+              {% endif %}
+              {% if field.errors %}
+                <div class="mt-1 space-y-0.5 text-xs text-rose-400 font-medium">
+                  {% for error in field.errors %}
+                    <p>{{ error }}</p>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     {% endif %}
-    <button class="mt-2 rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" type="submit">Guardar cambios</button>
+
+    <div class="pt-3">
+      <button class="w-full sm:w-auto rounded-xl bg-indigo-600 px-8 py-3 font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition" type="submit">
+        Guardar cambios
+      </button>
+    </div>
   </form>
 </section>
 {% endblock %}

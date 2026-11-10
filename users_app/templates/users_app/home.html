@@ -1,21 +1,93 @@
 {% extends "users_app/base.html" %}
 {% block title %}SODE | Eventos que conectan{% endblock %}
 {% block content %}
-<section class="mt-8 rounded-2xl border border-slate-800 bg-slate-900 px-6 py-16 sm:px-12 lg:px-24">
+<section class="mt-8 rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 px-6 py-16 sm:px-12 lg:px-20">
   <p class="mb-4 text-sm font-semibold uppercase tracking-widest text-indigo-300">Descubre. Participa. Conecta.</p>
   <h1 class="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">Tu comunidad, tus eventos.</h1>
-  <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-400">SODE reúne experiencias académicas, culturales y recreativas en un solo lugar.</p>
+  <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+    SODE reúne experiencias académicas, culturales y recreativas en un solo lugar, con control inteligente de cupos, listas de espera automatizadas y recomendaciones personalizadas.
+  </p>
   <div class="mt-8 flex flex-wrap gap-3">
+    <a class="rounded-xl bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 transition" href="{% url 'discovery' %}">
+      Explorar Catálogo de Eventos
+    </a>
     {% if user.is_authenticated %}
-      <a class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" href="{% url 'profile' %}">Ver mi perfil</a>
+      {% if user.role == 'organizer' %}
+        <a class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 font-semibold text-white hover:bg-slate-700 transition" href="{% url 'my_events' %}">
+          Panel de Organización
+        </a>
+      {% else %}
+        <a class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 font-semibold text-white hover:bg-slate-700 transition" href="{% url 'my_registrations' %}">
+          Mis Inscripciones
+        </a>
+      {% endif %}
+      <a class="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 font-semibold text-slate-300 hover:bg-slate-800 transition" href="{% url 'profile' %}">
+        Ver mi perfil
+      </a>
     {% else %}
-      <a class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-500" href="{% url 'assistant_signup' %}">Crear cuenta</a>
-      <a class="rounded-lg bg-slate-700 px-5 py-3 font-semibold text-white hover:bg-slate-600" href="{% url 'account_login' %}">Iniciar sesión</a>
+      <a class="rounded-xl bg-slate-800 px-5 py-3 font-semibold text-white hover:bg-slate-700 transition" href="{% url 'assistant_signup' %}">
+        Crear cuenta
+      </a>
+      <a class="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 font-semibold text-slate-300 hover:bg-slate-800 transition" href="{% url 'account_login' %}">
+        Iniciar sesión
+      </a>
     {% endif %}
   </div>
 </section>
-<section class="mt-6 grid gap-4 sm:grid-cols-2">
-  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6"><h2 class="text-xl font-bold text-indigo-300">Para asistentes</h2><p class="mt-2 text-slate-400">Encuentra actividades que coinciden con tus intereses.</p></article>
-  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6"><h2 class="text-xl font-bold text-indigo-300">Para organizadores</h2><p class="mt-2 text-slate-400">Presenta tu organización y conecta con tu comunidad.</p></article>
+
+<section class="mt-8 grid gap-4 sm:grid-cols-2">
+  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6">
+    <h2 class="text-xl font-bold text-indigo-300">Para asistentes</h2>
+    <p class="mt-2 text-slate-400">Encuentra actividades que coinciden con tus intereses, sigue a tus organizaciones favoritas y asegura tu lugar al instante.</p>
+  </article>
+  <article class="rounded-xl border border-slate-800 bg-slate-900 p-6">
+    <h2 class="text-xl font-bold text-indigo-300">Para organizadores</h2>
+    <p class="mt-2 text-slate-400">Presenta tu organización, diseña cuestionarios personalizados y gestiona automáticamente el aforo y la lista de espera.</p>
+  </article>
 </section>
+
+{% if featured_events %}
+<section class="mt-10">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold text-white">Próximos Eventos Destacados</h2>
+      <p class="text-sm text-slate-400">Actividades abiertas a la comunidad en SODE</p>
+    </div>
+    <a href="{% url 'discovery' %}" class="text-sm font-semibold text-indigo-400 hover:text-indigo-300">
+      Ver todos →
+    </a>
+  </div>
+
+  <div class="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {% for ev in featured_events %}
+      <article class="flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg hover:border-slate-700 transition">
+        <div class="relative h-44 w-full bg-slate-950 overflow-hidden">
+          {% if ev.imagen_promocional %}
+            <img src="{{ ev.imagen_promocional.url }}" alt="{{ ev.titulo }}" class="h-full w-full object-cover">
+          {% else %}
+            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-950/60">
+              <span class="text-2xl font-black tracking-widest text-indigo-400/40">SODE</span>
+            </div>
+          {% endif %}
+        </div>
+        <div class="flex flex-1 flex-col p-5">
+          <p class="text-xs font-semibold uppercase tracking-wider text-indigo-400">{{ ev.organizacion.name }}</p>
+          <h3 class="mt-1 text-lg font-bold text-white">{{ ev.titulo }}</h3>
+          <p class="mt-2 line-clamp-2 text-sm text-slate-400">{{ ev.descripcion }}</p>
+          <div class="mt-4 space-y-1 text-xs text-slate-300 border-t border-slate-800 pt-3">
+            <div>📅 {{ ev.fecha_inicio|date:"d M Y, H:i" }}</div>
+            <div>📍 {{ ev.ubicacion }}</div>
+            <div>👥 Cupo: {{ ev.confirmados_count }} / {{ ev.capacidad_maxima }} confirmados</div>
+          </div>
+        </div>
+        <div class="p-5 pt-0">
+          <a href="{% url 'event_detail' ev.id %}" class="block w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-xs font-semibold text-white hover:bg-indigo-500 transition">
+            Ver detalles e inscribirse
+          </a>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,14 @@
+<div data-tags class="space-y-2.5">
+  <input type="hidden" name="{{ widget.name }}" value="{{ widget.value }}" data-tags-value>
+  <div class="flex gap-2">
+    <input type="text" id="{{ widget.attrs.id }}" data-tags-input maxlength="100" autocomplete="off"
+           placeholder="{{ widget.placeholder }}"
+           class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition">
+    <button type="button" data-tags-add
+            class="shrink-0 rounded-xl border border-indigo-500/50 bg-indigo-600/20 px-4 text-sm font-semibold text-indigo-200 hover:bg-indigo-600/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+      Añadir
+    </button>
+  </div>
+  <ul data-tags-list class="flex flex-wrap gap-1.5" aria-live="polite"></ul>
+  <p data-tags-empty class="text-xs text-slate-500">Escribe y presiona Enter para agregar. Puedes añadir las que quieras.</p>
+</div>
