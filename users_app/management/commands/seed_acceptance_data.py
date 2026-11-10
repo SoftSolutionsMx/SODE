@@ -113,16 +113,12 @@ class Command(BaseCommand):
                 },
             )
 
-            # 4. Crear Asistentes Verificados
-            asistente_pruebas01 = self._upsert_user(
-                username='asistente_pruebas01',
-                email=self._build_email('asistente01@gmail.com', 'asistente01', real_email),
-                password=default_password,
-                role=User.Roles.ASSISTANT,
-                verified=True,
-            )
-            asistente_pruebas01.interests.set([int_tech, int_negocios])
+            # 4. Asegurar que el usuario a registrar en CP-ACE-01 NO exista previamente
+            EmailAddress.objects.filter(email__iexact='jluislararubio@gmail.com').delete()
+            User.objects.filter(username='asistente_pruebas01').delete()
+            User.objects.filter(email__iexact='jluislararubio@gmail.com').delete()
 
+            # 5. Crear Asistentes Verificados
             asistente_a = self._upsert_user(
                 username='asistente_a',
                 email=self._build_email('asistente_a@gmail.com', 'asistente_a', real_email),
@@ -134,7 +130,7 @@ class Command(BaseCommand):
 
             asistente_b = self._upsert_user(
                 username='asistente_b',
-                email=self._build_email('asistente_b@gmail.com', 'asistente_b', real_email),
+                email=self._build_email('jl.lararubio@gmail.com', 'asistente_b', real_email),
                 password=default_password,
                 role=User.Roles.ASSISTANT,
                 verified=True,
@@ -143,7 +139,7 @@ class Command(BaseCommand):
 
             asistente_c = self._upsert_user(
                 username='asistente_c',
-                email=self._build_email('asistente_c@gmail.com', 'asistente_c', real_email),
+                email=self._build_email('jluislararubio.estudio@gmail.com', 'asistente_c', real_email),
                 password=default_password,
                 role=User.Roles.ASSISTANT,
                 verified=True,
@@ -159,7 +155,7 @@ class Command(BaseCommand):
             )
             seguidor01.interests.set([int_tech, int_salud, int_negocios])
 
-            # 5. Crear 1 Asistente Pendiente de Verificación
+            # 6. Crear 1 Asistente Pendiente de Verificación
             asistente_pendiente = self._upsert_user(
                 username='asistente_pendiente',
                 email=self._build_email('pendiente@gmail.com', 'pendiente', real_email),
@@ -169,11 +165,12 @@ class Command(BaseCommand):
             )
             asistente_pendiente.interests.set([int_salud])
 
-            # 6. Relación social: seguidor01 sigue a "Organización A"
-            Seguimiento.objects.get_or_create(
-                asistente=seguidor01,
-                organizacion=org_a,
-            )
+            # 7. Relación social: seguidores de "Organización A" (incluyendo correos reales para CP-ACE-03)
+            for follower in (seguidor01, asistente_b, asistente_c):
+                Seguimiento.objects.get_or_create(
+                    asistente=follower,
+                    organizacion=org_a,
+                )
 
             # 7. Eventos Preconfigurados
             now = timezone.now()
@@ -251,18 +248,25 @@ class Command(BaseCommand):
             )
 
             # Garantizar exactamente 1 lugar ocupado en Taller de C++ 2026 (por seguidor01)
+            # y a asistente_c en Lista de Espera para CP-ACE-06
             Inscripcion.objects.filter(evento=ev_cpp).delete()
             Inscripcion.objects.create(
                 evento=ev_cpp,
                 asistente=seguidor01,
                 estado=Inscripcion.Estados.CONFIRMADO,
             )
+            Inscripcion.objects.create(
+                evento=ev_cpp,
+                asistente=asistente_c,
+                estado=Inscripcion.Estados.LISTA_ESPERA,
+            )
 
         self.stdout.write(self.style.SUCCESS('=========================================================='))
         self.stdout.write(self.style.SUCCESS('  DATOS DE ACEPTACIÓN SODE CARGADOS EXITOSAMENTE'))
         self.stdout.write(self.style.SUCCESS('=========================================================='))
         self.stdout.write(f'  Organizador : organizador_pruebas / {default_password} (Organización A)')
-        self.stdout.write(f'  Asistentes  : asistente_pruebas01, asistente_a, asistente_b, asistente_c, seguidor01 / {default_password}')
+        self.stdout.write(f'  Asistentes  : asistente_a (asistente_a@gmail.com), asistente_b (jl.lararubio@gmail.com), asistente_c (jluislararubio.estudio@gmail.com), seguidor01 / {default_password}')
+        self.stdout.write('  Por crear   : asistente_pruebas01 (jluislararubio@gmail.com) -> libre para CP-ACE-01')
         self.stdout.write(f'  No verific. : asistente_pendiente / {default_password}')
         self.stdout.write(f'  Evento 1    : "{ev_borrador.titulo}" [Estado: {ev_borrador.estado}, Cupo: 0/{ev_borrador.capacidad_maxima}]')
         self.stdout.write(f'  Evento 2    : "{ev_cpp.titulo}" [Estado: {ev_cpp.estado}, Cupo: {ev_cpp.confirmados_count}/{ev_cpp.capacidad_maxima}]')

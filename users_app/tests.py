@@ -448,7 +448,9 @@ class AcceptanceCPACE01AndSeedTests(TestCase):
 
         self.assertTrue(User.objects.filter(username='organizador_pruebas').exists())
         self.assertTrue(Organization.objects.filter(name='Organización A').exists())
-        for uname in ('asistente_pruebas01', 'asistente_a', 'asistente_b', 'asistente_c', 'seguidor01'):
+        self.assertFalse(User.objects.filter(username='asistente_pruebas01').exists())
+        self.assertFalse(User.objects.filter(email='jluislararubio@gmail.com').exists())
+        for uname in ('asistente_a', 'asistente_b', 'asistente_c', 'seguidor01'):
             u = User.objects.get(username=uname)
             self.assertTrue(u.is_email_verified())
 
